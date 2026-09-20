@@ -3,22 +3,39 @@ import fs from 'node:fs';
 import path from 'node:path';
 import bcrypt from 'bcryptjs';
 
-const DB_DIR = path.join(process.cwd(), 'data');
-const DB_PATH = path.join(DB_DIR, 'learnvocab.db');
-
-// Ensure data directory exists
-if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
+function getDatabasePath(): string {
+  // Trên môi trường Serverless của Vercel (read-only filesystem), sao chép sang /tmp để có quyền ghi
+  if (process.env.VERCEL) {
+    const tmpDb = path.join('/tmp', 'learnvocab.db');
+    if (!fs.existsSync(tmpDb)) {
+      const srcDb = path.join(process.cwd(), 'data', 'learnvocab.db');
+      if (fs.existsSync(srcDb)) {
+        try {
+          fs.copyFileSync(srcDb, tmpDb);
+        } catch (e) {
+          console.warn('Không thể sao chép db sang /tmp, sử dụng nguồn gốc:', e);
+          return srcDb;
+        }
+      }
+    }
+    return tmpDb;
+  }
+  return path.join(process.cwd(), 'data', 'learnvocab.db');
 }
 
 let dbInstance: DatabaseSync | null = null;
 
 export function getDb(): DatabaseSync {
   if (!dbInstance) {
-    dbInstance = new DatabaseSync(DB_PATH);
-    dbInstance.exec('PRAGMA journal_mode = WAL;');
-    dbInstance.exec('PRAGMA foreign_keys = ON;');
-    initSchema(dbInstance);
+    const dbPath = getDatabasePath();
+    dbInstance = new DatabaseSync(dbPath);
+    try {
+      dbInstance.exec('PRAGMA journal_mode = WAL;');
+      dbInstance.exec('PRAGMA foreign_keys = ON;');
+      initSchema(dbInstance);
+    } catch (e) {
+      console.warn('SQLite PRAGMA/schema warning:', e);
+    }
   }
   return dbInstance;
 }
@@ -27,7 +44,7 @@ function initSchema(db: DatabaseSync) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
+      email TEXT,
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       full_name TEXT NOT NULL,

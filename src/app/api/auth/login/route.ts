@@ -1,27 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { getUserByIdentifier } from '@/lib/userService';
 
 export async function POST(req: Request) {
   try {
     const { identifier, password } = await req.json();
     if (!identifier || !password) {
-      return NextResponse.json({ error: 'Vui lòng nhập đầy đủ thông tin' }, { status: 400 });
+      return NextResponse.json({ error: 'Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu' }, { status: 400 });
     }
 
-    const db = getDb();
-    const user = db.prepare(`
-      SELECT * FROM users WHERE email = ? OR username = ?
-    `).get(identifier.trim(), identifier.trim()) as {
-      id: string;
-      email: string;
-      username: string;
-      password_hash: string;
-      full_name: string;
-      avatar_url: string;
-      created_at: string;
-    } | undefined;
-
+    const user = getUserByIdentifier(identifier);
     if (!user) {
       return NextResponse.json({ error: 'Tài khoản hoặc mật khẩu không chính xác' }, { status: 401 });
     }
@@ -35,10 +23,10 @@ export async function POST(req: Request) {
       success: true,
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email || null,
         username: user.username,
         full_name: user.full_name,
-        avatar_url: user.avatar_url,
+        avatar_url: user.avatar_url || null,
         created_at: user.created_at,
       },
     });

@@ -93,7 +93,7 @@ export interface Vocabulary {
 
 export interface User {
   id: string;
-  email: string;
+  email?: string | null;
   username: string;
   full_name: string;
   avatar_url?: string | null;

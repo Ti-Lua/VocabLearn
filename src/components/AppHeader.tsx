@@ -195,7 +195,7 @@ export function AppHeader({ streakDays = 0, onToggleMobileSidebar }: AppHeaderPr
                     <div className="absolute right-0 mt-2 w-52 rounded-xl bg-[#121212] border border-neutral-800 shadow-2xl z-50 py-1 text-sm">
                       <div className="px-4 py-2 border-b border-neutral-800/80">
                         <p className="text-xs text-neutral-400">Đăng nhập với</p>
-                        <p className="text-sm font-semibold text-white truncate">{user.email}</p>
+                        <p className="text-sm font-semibold text-white truncate">{user.email || `@${user.username}`}</p>
                       </div>
                       <Link
                         href="/languages"

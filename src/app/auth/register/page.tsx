@@ -4,14 +4,14 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Eye, EyeOff, Lock, Mail, User, BookOpen, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User, BookOpen, ArrowRight } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuth();
 
-  const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,13 +24,14 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    if (username.trim().length < 3) {
-      setError('Tên người dùng (username) phải có tối thiểu 3 ký tự');
+    const cleanUsername = username.trim().toLowerCase().replace(/\s+/g, '');
+    if (cleanUsername.length < 3) {
+      setError('Tên đăng nhập phải có tối thiểu 3 ký tự');
       return;
     }
 
-    if (password.length < 6) {
-      setError('Mật khẩu phải có tối thiểu 6 ký tự');
+    if (password.length < 4) {
+      setError('Mật khẩu phải có tối thiểu 4 ký tự');
       return;
     }
 
@@ -40,11 +41,16 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    const res = await register({ fullName, username, email, password });
+    const res = await register({
+      username: cleanUsername,
+      password,
+      fullName: fullName.trim() || cleanUsername,
+      email: email.trim() ? email.trim() : undefined,
+    });
     setLoading(false);
 
     if (res.success) {
-      // Sau đăng ký -> chuyển sang trang chọn ngôn ngữ
+      // Sau đăng ký thành công -> chuyển sang trang chọn ngôn ngữ
       router.push('/languages');
     } else {
       setError(res.error || 'Đăng ký thất bại');
@@ -53,6 +59,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#080808] px-4 py-12 relative overflow-hidden selection:bg-[#FF202F] selection:text-white">
+      {/* Background glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#FF202F]/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md bg-[#121212] border border-neutral-800 rounded-3xl p-8 shadow-2xl relative z-10">
@@ -64,7 +71,7 @@ export default function RegisterPage() {
             Tạo tài khoản <span className="text-[#FF202F]">LearnVocab</span>
           </h1>
           <p className="text-xs text-neutral-400 mt-1.5">
-            Bắt đầu hành trình học từ vựng Đa ngôn ngữ (Anh - Trung - Nhật)
+            Đăng ký nhanh không cần Email • Dữ liệu lưu trữ an toàn
           </p>
         </div>
 
@@ -91,28 +98,10 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* Tên đăng nhập - Bắt buộc */}
           <div>
             <label className="block text-xs font-semibold text-neutral-300 mb-1">
-              Họ và tên
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
-                <User size={16} />
-              </div>
-              <input
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Nguyễn Văn A"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#181818] border border-neutral-800 text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-[#FF202F] focus:ring-1 focus:ring-[#FF202F] transition-all"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-neutral-300 mb-1">
-              Tên đăng nhập (Username)
+              Tên đăng nhập (Username) <span className="text-[#FF202F]">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500 font-bold text-sm">
@@ -123,34 +112,35 @@ export default function RegisterPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
-                placeholder="nguyenvana"
+                placeholder="Ví dụ: myaccount, tilua123..."
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#181818] border border-neutral-800 text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-[#FF202F] focus:ring-1 focus:ring-[#FF202F] transition-all"
               />
             </div>
           </div>
 
+          {/* Họ và tên - Tuỳ chọn */}
           <div>
             <label className="block text-xs font-semibold text-neutral-300 mb-1">
-              Địa chỉ Email
+              Họ và tên <span className="text-neutral-500 text-[11px] font-normal">(Tuỳ chọn)</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
-                <Mail size={16} />
+                <User size={16} />
               </div>
               <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@example.com"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Ví dụ: Nguyễn Văn A"
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#181818] border border-neutral-800 text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-[#FF202F] focus:ring-1 focus:ring-[#FF202F] transition-all"
               />
             </div>
           </div>
 
+          {/* Mật khẩu */}
           <div>
             <label className="block text-xs font-semibold text-neutral-300 mb-1">
-              Mật khẩu (tối thiểu 6 ký tự)
+              Mật khẩu <span className="text-[#FF202F]">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
@@ -161,7 +151,7 @@ export default function RegisterPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Tạo mật khẩu..."
+                placeholder="Tối thiểu 4 ký tự..."
                 className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#181818] border border-neutral-800 text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-[#FF202F] focus:ring-1 focus:ring-[#FF202F] transition-all"
               />
               <button
@@ -174,9 +164,10 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Xác nhận mật khẩu */}
           <div>
             <label className="block text-xs font-semibold text-neutral-300 mb-1">
-              Xác nhận mật khẩu
+              Xác nhận mật khẩu <span className="text-[#FF202F]">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
@@ -197,6 +188,26 @@ export default function RegisterPage() {
               >
                 {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
+            </div>
+          </div>
+
+          {/* Email - Hoàn toàn không bắt buộc */}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-300 mb-1 flex items-center justify-between">
+              <span>Email</span>
+              <span className="text-emerald-400/90 text-[11px] font-normal">Không bắt buộc (có thể bỏ trống)</span>
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
+                <Mail size={16} />
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com (không bắt buộc)"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#181818] border border-neutral-800 text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-[#FF202F] focus:ring-1 focus:ring-[#FF202F] transition-all"
+              />
             </div>
           </div>
 

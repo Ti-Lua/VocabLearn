@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Eye, EyeOff, Lock, Mail, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -85,18 +85,18 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-              Email hoặc Tên đăng nhập
+              Tên đăng nhập (hoặc Email)
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
-                <Mail size={16} />
+                <User size={16} />
               </div>
               <input
                 type="text"
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="demo@learnvocab.local hoặc tilua"
+                placeholder="Nhập tên đăng nhập hoặc email..."
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#181818] border border-neutral-800 text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-[#FF202F] focus:ring-1 focus:ring-[#FF202F] transition-all"
               />
             </div>
