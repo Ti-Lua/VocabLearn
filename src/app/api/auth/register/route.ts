@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { getUserByUsername, saveUser, getAllUsers } from '@/lib/userService';
+import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/authSession';
 
 export async function POST(req: Request) {
   try {
@@ -57,31 +58,57 @@ export async function POST(req: Request) {
     const hash = bcrypt.hashSync(password, salt);
     const userId = crypto.randomUUID();
     const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`;
+    const now = new Date().toISOString();
 
     const newUser = {
       id: userId,
       username: cleanUsername,
       password_hash: hash,
       full_name: cleanFullName,
+      display_name: cleanFullName,
       email: cleanEmail,
       avatar_url: avatarUrl,
-      created_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
+      last_login_at: now,
     };
 
-    // Lưu vào data/users.json và đồng bộ
+    // Lưu vào database và khởi tạo user_stats
     saveUser(newUser);
 
-    return NextResponse.json({
+    // Ký token phiên xác thực
+    const sessionToken = signSessionToken({
+      userId: newUser.id,
+      username: newUser.username,
+      email: newUser.email,
+    });
+
+    const userPayload = {
+      id: newUser.id,
+      username: newUser.username,
+      full_name: newUser.full_name,
+      display_name: newUser.display_name,
+      email: newUser.email,
+      avatar_url: newUser.avatar_url,
+      created_at: newUser.created_at,
+    };
+
+    const res = NextResponse.json({
       success: true,
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        full_name: newUser.full_name,
-        email: newUser.email,
-        avatar_url: newUser.avatar_url,
-        created_at: newUser.created_at,
-      },
+      user: userPayload,
+      token: sessionToken,
     }, { status: 201 });
+
+    // Thiết lập cookie HttpOnly an toàn
+    res.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60, // 30 ngày
+    });
+
+    return res;
   } catch (error) {
     console.error('Register error:', error);
     return NextResponse.json({ error: 'Lỗi đăng ký tài khoản trên máy chủ' }, { status: 500 });

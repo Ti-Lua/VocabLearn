@@ -31,6 +31,10 @@ export function getDb(): DatabaseSync {
     dbInstance = new DatabaseSync(dbPath);
     try {
       dbInstance.exec('PRAGMA journal_mode = WAL;');
+      dbInstance.exec('PRAGMA synchronous = NORMAL;');
+      dbInstance.exec('PRAGMA cache_size = -64000;'); // 64MB memory page cache
+      dbInstance.exec('PRAGMA temp_store = MEMORY;');
+      dbInstance.exec('PRAGMA mmap_size = 268435456;'); // 256MB memory mapped I/O
       dbInstance.exec('PRAGMA foreign_keys = ON;');
       initSchema(dbInstance);
     } catch (e) {
@@ -222,11 +226,32 @@ function initSchema(db: DatabaseSync) {
       UNIQUE(user_id, vocabulary_id)
     );
 
+    CREATE TABLE IF NOT EXISTS user_stats (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      total_words_learned INTEGER DEFAULT 0,
+      total_words_mastered INTEGER DEFAULT 0,
+      total_topics_completed INTEGER DEFAULT 0,
+      current_streak INTEGER DEFAULT 0,
+      longest_streak INTEGER DEFAULT 0,
+      total_learning_minutes INTEGER DEFAULT 0,
+      last_learning_date TEXT,
+      last_book_id INTEGER,
+      last_topic_id INTEGER,
+      last_vocab_id INTEGER,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_articles_created ON articles (created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_vocab_book_topic ON vocabulary (book_id, topic_id);
+    CREATE INDEX IF NOT EXISTS idx_vocab_topic_id ON vocabulary (topic_id);
+    CREATE INDEX IF NOT EXISTS idx_vocab_book_id ON vocabulary (book_id);
+    CREATE INDEX IF NOT EXISTS idx_vocab_word ON vocabulary (word);
     CREATE INDEX IF NOT EXISTS idx_vocab_norm_word ON vocabulary (normalized_word);
+    CREATE INDEX IF NOT EXISTS idx_topics_book_id ON topics (book_id);
     CREATE INDEX IF NOT EXISTS idx_user_vocab_prog ON user_vocabulary_progress (user_id, vocabulary_id);
     CREATE INDEX IF NOT EXISTS idx_user_vocab_status ON user_vocabulary_progress (user_id, status);
+    CREATE INDEX IF NOT EXISTS idx_user_vocab_next_rev ON user_vocabulary_progress (user_id, next_review_at);
+    CREATE INDEX IF NOT EXISTS idx_user_topic_prog_user ON user_topic_progress (user_id, topic_id);
     CREATE INDEX IF NOT EXISTS idx_distractors_vocab ON vocabulary_distractors (vocabulary_id);
     CREATE INDEX IF NOT EXISTS idx_exercise_attempts ON exercise_attempts (user_id, vocabulary_id);
     CREATE INDEX IF NOT EXISTS idx_study_sessions ON study_sessions (user_id, started_at);
@@ -238,6 +263,52 @@ function initSchema(db: DatabaseSync) {
     CREATE INDEX IF NOT EXISTS idx_user_zh_prog_user_vocab ON user_chinese_progress (user_id, vocabulary_id);
     CREATE INDEX IF NOT EXISTS idx_user_zh_prog_status ON user_chinese_progress (user_id, status);
   `);
+
+  // Migration for user_topic_progress columns
+  const topicProgCols = [
+    'total_words INTEGER DEFAULT 0',
+    'learned_words INTEGER DEFAULT 0',
+    'mastered_words INTEGER DEFAULT 0',
+    'progress_percent INTEGER DEFAULT 0',
+    "status TEXT DEFAULT 'not_started'",
+    'last_vocab_id INTEGER',
+    'last_studied_at TEXT'
+  ];
+  for (const col of topicProgCols) {
+    try {
+      db.exec(`ALTER TABLE user_topic_progress ADD COLUMN ${col};`);
+    } catch {
+      // Column already exists
+    }
+  }
+
+  // Migration for user_vocabulary_progress columns
+  const vocabProgCols = [
+    'incorrect_count INTEGER DEFAULT 0',
+    'review_count INTEGER DEFAULT 0',
+    'mastery_score INTEGER DEFAULT 0'
+  ];
+  for (const col of vocabProgCols) {
+    try {
+      db.exec(`ALTER TABLE user_vocabulary_progress ADD COLUMN ${col};`);
+    } catch {
+      // Column already exists
+    }
+  }
+
+  // Migration for users columns
+  const userCols = [
+    'display_name TEXT',
+    'last_login_at TEXT',
+    'updated_at TEXT'
+  ];
+  for (const col of userCols) {
+    try {
+      db.exec(`ALTER TABLE users ADD COLUMN ${col};`);
+    } catch {
+      // Column already exists
+    }
+  }
 
   // Migration for vocabulary image pipeline columns if not present
   const newCols = [

@@ -59,54 +59,70 @@ export async function generateGoogleTTS(
   text: string,
   voiceName: string = 'Puck'
 ): Promise<Buffer> {
-  const cacheKey = `${voiceName}:${text.trim().toLowerCase()}`;
+  const cleanText = text.trim();
+  const cacheKey = `${voiceName}:${cleanText.toLowerCase()}`;
   if (ttsMemoryCache.has(cacheKey)) {
     return ttsMemoryCache.get(cacheKey)!;
   }
 
-  // Clean prompt text - for single words or short phrases, guide Gemini to enunciate clearly
-  const isSingleWord = text.trim().split(/\s+/).length <= 2;
-  const speakText = isSingleWord
-    ? `Pronounce clearly: ${text.trim()}`
-    : text.trim();
+  // Use identical natural text for both single words and example sentences
+  // to ensure 100% consistent speaking pace and speed synchronization across words and examples
+  const speakText = cleanText;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_API_KEY}`;
+  const ttsModels = [
+    'gemini-3.1-flash-tts-preview',
+    'gemini-2.5-flash-preview-tts',
+  ];
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [{ text: speakText }],
-        },
-      ],
-      generationConfig: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: voiceName || 'Puck',
+  let lastError: Error | null = null;
+  let rawPcm: Buffer | null = null;
+
+  for (const model of ttsModels) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: speakText }],
+            },
+          ],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: {
+                  voiceName: voiceName || 'Puck',
+                },
+              },
             },
           },
-        },
-      },
-    }),
-  });
+        }),
+      });
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Google Studio AI TTS failed (${res.status}): ${errorText}`);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Model ${model} TTS failed (${res.status}): ${errorText}`);
+      }
+
+      const data = await res.json();
+      const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+
+      if (inlineData && inlineData.data) {
+        rawPcm = Buffer.from(inlineData.data, 'base64');
+        break; // Successfully obtained audio
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
   }
 
-  const data = await res.json();
-  const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-
-  if (!inlineData || !inlineData.data) {
-    throw new Error('Google Studio AI did not return audio data in response.');
+  if (!rawPcm) {
+    throw lastError || new Error('Google Studio AI did not return audio data in response.');
   }
 
-  const rawPcm = Buffer.from(inlineData.data, 'base64');
   const wavBuffer = pcmToWav(rawPcm, 24000);
 
   // Save to cache (limit size to 500 items)

@@ -5,7 +5,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { Sidebar } from '@/components/Sidebar';
 import { AudioButton } from '@/components/AudioButton';
 import { Article, ArticleVocab } from '@/types';
-import { getTTSAudioUrl } from '@/lib/audio';
+import { getTTSAudioUrl, getAudioSpeed, setAudioSpeed, configureAudioSpeed } from '@/lib/audio';
 import { GOOGLE_TTS_VOICES, GoogleVoiceId } from '@/lib/gemini';
 import {
   BookOpen,
@@ -44,10 +44,35 @@ export default function ReadingListeningPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Load articles on mount
+  // Load articles and sync audio speed on mount
   useEffect(() => {
     fetchArticles();
+    const currentSpeed = getAudioSpeed();
+    setPlaybackSpeed(currentSpeed);
+
+    const handleSpeedEvent = (e: Event) => {
+      const custom = e as CustomEvent<{ speed: number }>;
+      if (custom.detail?.speed !== undefined) {
+        setPlaybackSpeed(custom.detail.speed);
+        if (audioRef.current) {
+          audioRef.current.defaultPlaybackRate = custom.detail.speed;
+          audioRef.current.playbackRate = custom.detail.speed;
+        }
+      }
+    };
+
+    window.addEventListener('audio_speed_change', handleSpeedEvent);
+    return () => window.removeEventListener('audio_speed_change', handleSpeedEvent);
   }, []);
+
+  const handleSpeedSelect = (speed: number) => {
+    setPlaybackSpeed(speed);
+    setAudioSpeed(speed);
+    if (audioRef.current) {
+      audioRef.current.defaultPlaybackRate = speed;
+      audioRef.current.playbackRate = speed;
+    }
+  };
 
   const fetchArticles = async () => {
     setLoading(true);
@@ -106,7 +131,7 @@ export default function ReadingListeningPage() {
 
     const ttsUrl = getTTSAudioUrl(p.en, selectedVoice);
     const audio = new Audio(ttsUrl);
-    audio.playbackRate = playbackSpeed;
+    configureAudioSpeed(audio, playbackSpeed);
     audioRef.current = audio;
 
     setPlayingParagraphIndex(index);
@@ -299,20 +324,24 @@ export default function ReadingListeningPage() {
 
                 {/* Speed Switcher */}
                 <div className="flex items-center gap-1 bg-[#181818] p-1 rounded-xl border border-neutral-800 text-[11px] font-bold">
-                  {[0.8, 1.0, 1.25].map((speed) => (
-                    <button
-                      key={speed}
-                      type="button"
-                      onClick={() => setPlaybackSpeed(speed)}
-                      className={`px-2 py-0.5 rounded-lg transition-colors ${
-                        playbackSpeed === speed
-                          ? 'bg-[#FF202F] text-white'
-                          : 'text-neutral-400 hover:text-white'
-                      }`}
-                    >
-                      {speed}x
-                    </button>
-                  ))}
+                  {[0.5, 0.75, 1.0, 1.25, 1.5].map((speed) => {
+                    const isActive = Math.abs(playbackSpeed - speed) < 0.05;
+                    return (
+                      <button
+                        key={speed}
+                        type="button"
+                        onClick={() => handleSpeedSelect(speed)}
+                        title={`Tốc độ đọc ${speed}x`}
+                        className={`px-2 py-0.5 rounded-lg transition-all active:scale-95 ${
+                          isActive
+                            ? 'bg-[#FF202F] text-white shadow-sm shadow-[#FF202F]/30 scale-105'
+                            : 'text-neutral-400 hover:text-white'
+                        }`}
+                      >
+                        {speed === 1.0 ? '1x' : `${speed}x`}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Display Mode Switcher */}

@@ -106,5 +106,35 @@
     "full_name": "Học Viên Thử Nghiệm",
     "avatar_url": "https://api.dicebear.com/7.x/bottts/svg?seed=hocvien6525",
     "created_at": "2026-09-19 17:06:03"
+  },
+  {
+    "id": "test-user-a-1789996226221",
+    "username": "user_a_1789996226221",
+    "password_hash": "$2b$10$jUtXHF8Sp8qs23KxpMX/7O70/Ff24ipd5F1uM5cgqlpPnHhzVPuM.",
+    "full_name": "Người Học A",
+    "display_name": "Người Học A",
+    "email": "usera_1789996226286@test.com",
+    "created_at": "2026-09-21T13:10:26.286Z"
+  },
+  {
+    "id": "test-user-a-1789996386105",
+    "username": "user_a_1789996386105",
+    "password_hash": "$2b$10$ehDYqhJ5mbNBZSGH2spGhOZhYglXwrxzbwu8YYJ3DluHbG/11tuBa",
+    "full_name": "Tên Mới Của A",
+    "display_name": "Tên Mới Của A",
+    "email": "usera_1789996386158@test.com",
+    "avatar_url": "https://avatar.com/test.png",
+    "created_at": "2026-09-21T13:13:06.158Z",
+    "updated_at": "2026-09-21T13:13:06.314Z",
+    "last_login_at": "2026-09-21T13:13:06.158Z"
+  },
+  {
+    "id": "test-user-b-1789996386164",
+    "username": "user_b_1789996386164",
+    "password_hash": "$2b$10$S.n7WqV2Lw1uthT1LIqo6uSUdLqnic4SwZQ28ti.QZ3fsQGrhjxjC",
+    "full_name": "Người Học B",
+    "display_name": "Người Học B",
+    "email": "userb_1789996386212@test.com",
+    "created_at": "2026-09-21T13:13:06.212Z"
   }
 ]

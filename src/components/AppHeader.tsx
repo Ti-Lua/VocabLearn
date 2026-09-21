@@ -198,6 +198,14 @@ export function AppHeader({ streakDays = 0, onToggleMobileSidebar }: AppHeaderPr
                         <p className="text-sm font-semibold text-white truncate">{user.email || `@${user.username}`}</p>
                       </div>
                       <Link
+                        href="/profile"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800/60 transition-colors"
+                      >
+                        <UserIcon size={16} className="text-neutral-400" />
+                        <span>Hồ sơ & Sao lưu</span>
+                      </Link>
+                      <Link
                         href="/languages"
                         onClick={() => setDropdownOpen(false)}
                         className="flex items-center gap-2.5 px-4 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800/60 transition-colors"

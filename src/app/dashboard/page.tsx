@@ -10,30 +10,34 @@ import { AppHeader } from '@/components/AppHeader';
 import { Sidebar } from '@/components/Sidebar';
 import { ProgressBar } from '@/components/ProgressBar';
 import {
+  useBooks,
+  useUserStats,
+  useContinueLearning,
+  useChineseStats,
+} from '@/lib/hooks/useLearningData';
+import {
   BookOpen,
   Headphones,
-  Clock,
   ArrowRight,
   Flame,
   Award,
+  Play,
   RotateCcw,
+  CheckCircle2,
 } from 'lucide-react';
-import { Book, UserStatistics, ChineseDashboardStats } from '@/types';
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { isChinese } = useLanguage();
 
-  // English state
-  const [books, setBooks] = useState<Book[]>([]);
-  const [stats, setStats] = useState<UserStatistics | null>(null);
+  // SWR Caching Hooks - Tải tức thì 0ms từ bộ nhớ đệm
+  const { books, isLoading: booksLoading } = useBooks(user?.id);
+  const { stats: userStats } = useUserStats(user?.id);
+  const { continueData } = useContinueLearning(user?.id);
+  const { chineseStats, isLoading: zhLoading } = useChineseStats(user?.id);
+
   const [reviewCount, setReviewCount] = useState<number>(0);
-
-  // Chinese state
-  const [chineseStats, setChineseStats] = useState<ChineseDashboardStats | null>(null);
-
-  const [loading, setLoading] = useState(true);
 
   // Auth Guard
   useEffect(() => {
@@ -42,43 +46,26 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
+  // Fetch review words count in background
   useEffect(() => {
     if (!user) return;
+    const reviewUrl = isChinese
+      ? `/api/chinese/review?userId=${user.id}`
+      : `/api/review?userId=${user.id}`;
 
-    setLoading(true);
-
-    if (isChinese) {
-      // Fetch Chinese dashboard data
-      Promise.all([
-        fetch(`/api/chinese/stats?userId=${user.id}`).then((r) => r.json()),
-        fetch(`/api/chinese/review?userId=${user.id}`).then((r) => r.json()),
-      ])
-        .then(([statsRes, reviewRes]) => {
-          if (statsRes.stats) setChineseStats(statsRes.stats);
-          if (reviewRes.words) setReviewCount(reviewRes.words.length);
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    } else {
-      // Fetch English dashboard data
-      Promise.all([
-        fetch(`/api/books?userId=${user.id}`).then((r) => r.json()),
-        fetch(`/api/statistics?userId=${user.id}`).then((r) => r.json()),
-        fetch(`/api/review?userId=${user.id}`).then((r) => r.json()),
-      ])
-        .then(([booksRes, statsRes, reviewRes]) => {
-          if (booksRes.books) setBooks(booksRes.books);
-          if (statsRes.statistics) setStats(statsRes.statistics);
-          if (reviewRes.words) setReviewCount(reviewRes.words.length);
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    }
+    fetch(reviewUrl)
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.words) setReviewCount(res.words.length);
+      })
+      .catch(() => {});
   }, [user, isChinese]);
+
+  const loading = authLoading || (isChinese ? zhLoading && !chineseStats : booksLoading && books.length === 0);
 
   return (
     <div className="min-h-screen bg-[#080808] flex flex-col">
-      <AppHeader streakDays={stats?.studyStreakDays || 1} />
+      <AppHeader streakDays={userStats?.current_streak || 1} />
 
       <div className="flex-1 flex">
         {/* Compact sidebar for Dashboard */}
@@ -138,111 +125,59 @@ export default function DashboardPage() {
                 <div className="p-5 rounded-3xl bg-[#121212] border border-neutral-800 space-y-1">
                   <span className="text-xs text-neutral-400 font-medium">Tổng từ vựng HSK</span>
                   <div className="flex items-center gap-2 pt-1">
-                    <BookOpen size={20} className="text-white" />
-                    <p className="text-2xl sm:text-3xl font-black text-white">
-                      {(chineseStats?.total_words || 4896).toLocaleString()}
-                    </p>
+                    <span className="text-2xl sm:text-3xl font-black text-white">
+                      {chineseStats?.total_words || 4896}
+                    </span>
+                    <span className="text-xs font-bold text-neutral-500">từ</span>
                   </div>
                 </div>
 
                 <div className="p-5 rounded-3xl bg-[#121212] border border-neutral-800 space-y-1">
-                  <span className="text-xs text-neutral-400 font-medium">Đã thuộc (Mastered)</span>
+                  <span className="text-xs text-neutral-400 font-medium flex items-center gap-1.5">
+                    <Award size={14} className="text-yellow-500" />
+                    Đã nắm vững
+                  </span>
                   <div className="flex items-center gap-2 pt-1">
-                    <Award size={20} className="text-emerald-400" />
-                    <p className="text-2xl sm:text-3xl font-black text-emerald-400">
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-400">
                       {chineseStats?.words_mastered || 0}
-                    </p>
+                    </span>
+                    <span className="text-xs font-bold text-emerald-500/80">từ</span>
                   </div>
                 </div>
 
                 <div className="p-5 rounded-3xl bg-[#121212] border border-neutral-800 space-y-1">
-                  <span className="text-xs text-neutral-400 font-medium">Đang học (Learning)</span>
+                  <span className="text-xs text-neutral-400 font-medium flex items-center gap-1.5">
+                    <BookOpen size={14} className="text-[#FF202F]" />
+                    Đang học
+                  </span>
                   <div className="flex items-center gap-2 pt-1">
-                    <Clock size={20} className="text-amber-400" />
-                    <p className="text-2xl sm:text-3xl font-black text-amber-400">
+                    <span className="text-2xl sm:text-3xl font-black text-[#FF202F]">
                       {chineseStats?.words_learning || 0}
-                    </p>
+                    </span>
+                    <span className="text-xs font-bold text-[#FF202F]/80">từ</span>
                   </div>
                 </div>
 
                 <div className="p-5 rounded-3xl bg-[#121212] border border-neutral-800 space-y-1">
-                  <span className="text-xs text-neutral-400 font-medium">Cần ôn lại (Review Later)</span>
+                  <span className="text-xs text-neutral-400 font-medium flex items-center gap-1.5">
+                    <RotateCcw size={14} className="text-amber-500" />
+                    Cần xem lại
+                  </span>
                   <div className="flex items-center gap-2 pt-1">
-                    <RotateCcw size={20} className="text-[#FF202F]" />
-                    <p className="text-2xl sm:text-3xl font-black text-[#FF202F]">
+                    <span className="text-2xl sm:text-3xl font-black text-amber-400">
                       {chineseStats?.review_later || 0}
-                    </p>
+                    </span>
+                    <span className="text-xs font-bold text-amber-500/80">từ</span>
                   </div>
                 </div>
               </div>
 
-              {/* 2 Big Interactive Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Card 1: HSK Vocab */}
-                <Link
-                  href="/zh/vocab"
-                  className="group relative rounded-3xl p-7 bg-[#121212] border border-neutral-800 hover:border-[#FF202F]/60 transition-all duration-300 hover:shadow-2xl hover:shadow-[#FF202F]/15 flex flex-col justify-between overflow-hidden"
-                >
-                  <div className="space-y-3">
-                    <div className="w-12 h-12 rounded-2xl bg-[#FF202F]/15 text-[#FF202F] flex items-center justify-center border border-[#FF202F]/30 group-hover:scale-110 transition-transform">
-                      <BookOpen size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-black text-white group-hover:text-[#FF202F] transition-colors">
-                        Vocab HSK 1 - HSK 6
-                      </h2>
-                      <p className="text-xs text-neutral-400 mt-1">
-                        Học theo 6 cấp độ HSK chuẩn hóa, chia nhỏ theo 31 chủ đề thực tiễn (Gia đình, Ăn uống, Công việc...).
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-neutral-850 flex items-center justify-between mt-6">
-                    <span className="text-xs font-bold text-white group-hover:text-[#FF202F] transition-colors flex items-center gap-1.5">
-                      Khám phá 6 cấp độ HSK
-                      <ArrowRight size={14} />
-                    </span>
-                    <span className="text-[11px] font-mono text-neutral-400">4.896 từ vựng</span>
-                  </div>
-                </Link>
-
-                {/* Card 2: Spaced Repetition Review */}
-                <Link
-                  href="/zh/review"
-                  className="group relative rounded-3xl p-7 bg-[#121212] border border-neutral-800 hover:border-[#FF202F]/60 transition-all duration-300 hover:shadow-2xl hover:shadow-[#FF202F]/15 flex flex-col justify-between overflow-hidden"
-                >
-                  <div className="space-y-3">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30 group-hover:scale-110 transition-transform">
-                      <RotateCcw size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-black text-white group-hover:text-amber-400 transition-colors">
-                        Ôn tập từ chưa thuộc
-                      </h2>
-                      <p className="text-xs text-neutral-400 mt-1">
-                        Hệ thống lặp lại ngắt quãng (Spaced Repetition) tự động gom các từ bạn chưa thuộc hoặc cần củng cố.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-neutral-850 flex items-center justify-between mt-6">
-                    <span className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors flex items-center gap-1.5">
-                      Vào phòng ôn tập
-                      <ArrowRight size={14} />
-                    </span>
-                    <span className="text-[11px] font-mono text-amber-400">
-                      {(chineseStats?.words_learning || 0) + (chineseStats?.review_later || 0)} từ cần ôn
-                    </span>
-                  </div>
-                </Link>
-              </div>
-
-              {/* Progress for 6 HSK Levels */}
+              {/* HSK 1 - 6 Level Progress Cards */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-white">Tiến độ 6 cấp độ HSK</h3>
-                    <p className="text-xs text-neutral-400">Dữ liệu tính toán độc lập theo tài khoản của bạn</p>
+                    <h3 className="text-lg font-bold text-white">6 Cấp độ Tiếng Trung HSK</h3>
+                    <p className="text-xs text-neutral-400">Chọn cấp độ để bắt đầu học theo chủ đề</p>
                   </div>
                   <Link href="/zh/vocab" className="text-xs font-bold text-[#FF202F] hover:underline">
                     Xem tất cả cấp độ →
@@ -306,7 +241,7 @@ export default function DashboardPage() {
                 <div className="relative z-10 space-y-1.5">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FF202F]/10 text-[#FF202F] text-xs font-bold border border-[#FF202F]/20">
                     <Flame size={14} className="fill-[#FF202F]" />
-                    <span>Chuỗi học tập: {stats?.studyStreakDays || 1} ngày liên tiếp</span>
+                    <span>Chuỗi học tập: {userStats?.current_streak || 1} ngày liên tiếp</span>
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-black text-white">
                     Xin chào, {user?.full_name || 'Bạn'} 👋
@@ -316,24 +251,81 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
-                {/* Quick action: Review today banner if words need review */}
-                {reviewCount > 0 && (
+                {/* Continue Learning Resume Banner (Fast Action) */}
+                {continueData && (
                   <div className="relative z-10 flex-shrink-0 bg-[#1e1516] border border-[#FF202F]/30 p-4 rounded-2xl flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-[#FF202F] text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-[#FF202F]/30">
-                      {reviewCount}
+                      <Play size={18} className="fill-white ml-0.5" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-white">Ôn tập hôm nay</p>
-                      <p className="text-[11px] text-neutral-400">Có {reviewCount} từ cần ôn tập</p>
+                      <p className="text-xs font-bold text-white line-clamp-1">{continueData.topicName}</p>
+                      <p className="text-[11px] text-neutral-400">
+                        {continueData.bookShortName} • {continueData.progressPercent}%
+                      </p>
                     </div>
                     <Link
-                      href="/review"
-                      className="px-3.5 py-1.5 rounded-xl bg-[#FF202F] hover:bg-[#D91827] text-white text-xs font-bold transition-all"
+                      href={continueData.resumeUrl}
+                      className="px-3.5 py-1.5 rounded-xl bg-[#FF202F] hover:bg-[#D91827] text-white text-xs font-bold transition-all whitespace-nowrap"
                     >
-                      Bắt đầu ôn
+                      Tiếp tục học
                     </Link>
                   </div>
                 )}
+              </div>
+
+              {/* Overall Progress Metrics Bar */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-5 rounded-3xl bg-[#121212] border border-neutral-800 space-y-1">
+                  <span className="text-xs text-neutral-400 font-medium flex items-center gap-1.5">
+                    <Award size={14} className="text-yellow-500" />
+                    Từ vựng đã thuộc
+                  </span>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-2xl sm:text-3xl font-black text-white">
+                      {userStats?.total_words_mastered || 0}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-400">từ</span>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-3xl bg-[#121212] border border-neutral-800 space-y-1">
+                  <span className="text-xs text-neutral-400 font-medium flex items-center gap-1.5">
+                    <BookOpen size={14} className="text-[#FF202F]" />
+                    Từ đang học
+                  </span>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-2xl sm:text-3xl font-black text-white">
+                      {userStats?.total_words_learned || 0}
+                    </span>
+                    <span className="text-xs font-bold text-[#FF202F]">từ</span>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-3xl bg-[#121212] border border-neutral-800 space-y-1">
+                  <span className="text-xs text-neutral-400 font-medium flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className="text-emerald-400" />
+                    Chủ đề hoàn thành
+                  </span>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-2xl sm:text-3xl font-black text-white">
+                      {userStats?.total_topics_completed || 0}
+                    </span>
+                    <span className="text-xs font-bold text-neutral-400">topics</span>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-3xl bg-[#121212] border border-neutral-800 space-y-1">
+                  <span className="text-xs text-neutral-400 font-medium flex items-center gap-1.5">
+                    <Flame size={14} className="text-[#FF202F]" />
+                    Chuỗi học tập
+                  </span>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-2xl sm:text-3xl font-black text-[#FF202F]">
+                      {userStats?.current_streak || 1}
+                    </span>
+                    <span className="text-xs font-bold text-[#FF202F]/80">ngày</span>
+                  </div>
+                </div>
               </div>
 
               {/* 2 Big Interactive Cards */}
@@ -363,7 +355,7 @@ export default function DashboardPage() {
                       <ArrowRight size={14} />
                     </span>
                     <span className="text-[11px] font-mono text-neutral-400">
-                      {stats?.topicsCompleted || 0} / {stats?.totalTopics || 0} topics đã hoàn thành
+                      {userStats?.total_topics_completed || 0} topics đã hoàn thành
                     </span>
                   </div>
                 </Link>
@@ -416,48 +408,59 @@ export default function DashboardPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {books.map((book) => (
-                    <Link
+                    <div
                       key={book.id}
-                      href={`/books/${book.id}`}
-                      className="group block rounded-2xl bg-[#121212] border border-neutral-800 hover:border-[#FF202F]/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden"
+                      className="group block rounded-2xl bg-[#121212] border border-neutral-800 hover:border-[#FF202F]/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden flex flex-col justify-between"
                     >
-                      <div className="relative w-full h-36 bg-neutral-900 overflow-hidden border-b border-neutral-800/80">
-                        {book.cover_image ? (
-                          <Image
-                            src={book.cover_image}
-                            alt={book.short_name}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-neutral-700">
-                            <BookOpen size={32} />
+                      <div>
+                        <Link href={`/books/${book.id}`} className="block relative w-full h-36 bg-neutral-900 overflow-hidden border-b border-neutral-800/80">
+                          {book.cover_image ? (
+                            <Image
+                              src={book.cover_image}
+                              alt={book.short_name}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-500"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-neutral-700">
+                              <BookOpen size={32} />
+                            </div>
+                          )}
+                          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md text-[10px] font-bold text-[#FF202F] border border-neutral-700">
+                            {book.progress_percentage || 0}%
                           </div>
-                        )}
-                        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md text-[10px] font-bold text-[#FF202F] border border-neutral-700">
-                          {book.progress_percentage || 0}%
+                        </Link>
+
+                        <div className="p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">
+                              {book.level}
+                            </span>
+                          </div>
+
+                          <h4 className="text-sm font-bold text-white group-hover:text-[#FF202F] transition-colors line-clamp-1">
+                            {book.short_name}
+                          </h4>
+
+                          <p className="text-xs text-neutral-400">
+                            {book.completed_topics || 0} / {book.total_topics || 0} topics
+                          </p>
+
+                          <ProgressBar progress={book.progress_percentage || 0} height="h-1.5" />
                         </div>
                       </div>
 
-                      <div className="p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">
-                            {book.level}
-                          </span>
-                        </div>
-
-                        <h4 className="text-sm font-bold text-white group-hover:text-[#FF202F] transition-colors line-clamp-1">
-                          {book.short_name}
-                        </h4>
-
-                        <p className="text-xs text-neutral-400">
-                          {book.completed_topics || 0} / {book.total_topics || 0} topics
-                        </p>
-
-                        <ProgressBar progress={book.progress_percentage || 0} height="h-1.5" />
+                      <div className="p-4 pt-0">
+                        <Link
+                          href={`/books/${book.id}`}
+                          className="w-full py-2 rounded-xl bg-neutral-800/80 hover:bg-[#FF202F] text-neutral-200 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                        >
+                          <span>Học sách này</span>
+                          <ArrowRight size={12} />
+                        </Link>
                       </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               </div>

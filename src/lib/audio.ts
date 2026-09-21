@@ -29,6 +29,7 @@ export function setAudioSpeed(speed: number) {
   currentPlaybackSpeed = speed;
   if (activeAudio) {
     try {
+      activeAudio.defaultPlaybackRate = speed;
       activeAudio.playbackRate = speed;
     } catch {
       // ignore
@@ -62,6 +63,50 @@ export function getAudioSpeed(): number {
 }
 
 /**
+ * Robustly configures an HTMLAudioElement with playback speed,
+ * preserving natural voice pitch and preventing browser audio engines (e.g. Chrome/WebKit)
+ * from resetting playbackRate to default 1.0 during load and metadata events.
+ */
+export function configureAudioSpeed(audio: HTMLAudioElement, speed: number) {
+  const safeSpeed = Math.max(0.5, Math.min(2.0, speed));
+
+  const apply = () => {
+    try {
+      audio.defaultPlaybackRate = safeSpeed;
+      audio.playbackRate = safeSpeed;
+
+      // Preserve pitch so voice sounds natural (not distorted or squeaky)
+      if ('preservesPitch' in audio) {
+        audio.preservesPitch = true;
+      }
+      const vendorAudio = audio as unknown as {
+        mozPreservesPitch?: boolean;
+        webkitPreservesPitch?: boolean;
+      };
+      if ('mozPreservesPitch' in vendorAudio) {
+        vendorAudio.mozPreservesPitch = true;
+      }
+      if ('webkitPreservesPitch' in vendorAudio) {
+        vendorAudio.webkitPreservesPitch = true;
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Immediate apply
+  apply();
+
+  // Crucial: Chromium resets playbackRate to defaultPlaybackRate on load/metadata events
+  audio.addEventListener('loadstart', apply);
+  audio.addEventListener('loadedmetadata', apply);
+  audio.addEventListener('loadeddata', apply);
+  audio.addEventListener('canplay', apply);
+  audio.addEventListener('play', apply);
+  audio.addEventListener('playing', apply);
+}
+
+/**
  * Returns a direct URL to the Google Studio AI TTS endpoint for any text/sentence
  * Supports multi-language parameter (en, ja, zh, ko, fr, de, es).
  */
@@ -72,6 +117,14 @@ export function getTTSAudioUrl(text: string, voice?: string, langCode: string = 
 }
 
 let activeAudio: HTMLAudioElement | null = null;
+
+export function setActiveAudio(audio: HTMLAudioElement | null) {
+  activeAudio = audio;
+}
+
+export function getActiveAudio(): HTMLAudioElement | null {
+  return activeAudio;
+}
 
 export function stopPronunciation() {
   if (activeAudio) {
@@ -96,7 +149,7 @@ export function stopPronunciation() {
  * Plays pronunciation using Google Studio AI voice with instant caching and fallback.
  * Language-aware: adapts to target language (English, Japanese, Chinese, Korean, etc.).
  * Supports onEnded callback for animated play buttons and reading example sentences.
- * Respects configured playback speed (0.75x, 1.0x, 1.25x).
+ * Strictly respects configured playback speed (0.5x, 0.75x, 1.0x, 1.25x, 1.5x).
  */
 export async function playPronunciation(
   word: string,
@@ -124,15 +177,25 @@ export async function playPronunciation(
   ) {
     try {
       const audio = new Audio(customAudioUrl.trim());
-      audio.playbackRate = speed;
+      configureAudioSpeed(audio, speed);
       activeAudio = audio;
-      audio.onended = () => {
-        onEnded?.();
-      };
-      audio.onerror = () => {
-        onEnded?.();
-      };
-      await audio.play();
+
+      await new Promise<void>((resolve, reject) => {
+        audio.onended = () => {
+          if (activeAudio === audio) activeAudio = null;
+          onEnded?.();
+          resolve();
+        };
+        audio.onerror = () => {
+          if (activeAudio === audio) activeAudio = null;
+          onEnded?.();
+          reject(new Error('Custom audio URL playback failed'));
+        };
+        audio.play().catch((err) => {
+          if (activeAudio === audio) activeAudio = null;
+          reject(err);
+        });
+      });
       return;
     } catch {
       // Fall through to Google Studio AI
@@ -143,18 +206,23 @@ export async function playPronunciation(
   try {
     const ttsUrl = getTTSAudioUrl(cleanWord, voice, langCode);
     const audio = new Audio(ttsUrl);
-    audio.playbackRate = speed;
+    configureAudioSpeed(audio, speed);
     activeAudio = audio;
 
     await new Promise<void>((resolve, reject) => {
       audio.onended = () => {
+        if (activeAudio === audio) activeAudio = null;
         onEnded?.();
         resolve();
       };
       audio.onerror = () => {
+        if (activeAudio === audio) activeAudio = null;
         reject(new Error('Audio element error loading TTS stream'));
       };
-      audio.play().then(resolve).catch(reject);
+      audio.play().catch((err) => {
+        if (activeAudio === audio) activeAudio = null;
+        reject(err);
+      });
     });
     return;
   } catch (error) {
@@ -176,7 +244,7 @@ function speakWithSpeechSynthesis(word: string, langCode: string = 'en', onEnded
   const utterance = new SpeechSynthesisUtterance(word);
   utterance.lang = targetLocale;
   const speed = getAudioSpeed();
-  utterance.rate = Math.max(0.6, Math.min(1.8, speed * 0.9)); // scale smoothly
+  utterance.rate = Math.max(0.5, Math.min(2.0, speed));
 
   utterance.onend = () => {
     onEnded?.();

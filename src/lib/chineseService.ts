@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import { getSupabaseAdmin } from './supabase';
 import {
   ChineseVocabulary,
   ChineseHskLevelStats,
@@ -35,51 +36,75 @@ export function getChineseDashboardStats(userId: string): ChineseDashboardStats 
     else if (row.status === 'review_later') review_later = row.cnt;
   }
 
-  // Level statistics for HSK 1 to 6
+  // Level statistics for HSK 1 to 6 - gom vào 3 queries tổng thay vì lặp 18 queries
   const levels: ChineseHskLevelStats[] = [];
   let totalCompletedTopics = 0;
   let totalDistinctTopicsCount = 0;
 
+  // 1. Tổng số từ theo từng level HSK
+  const lvlTotals = db.prepare(`
+    SELECT hsk_level, COUNT(*) as cnt 
+    FROM chinese_vocabulary 
+    GROUP BY hsk_level
+  `).all() as { hsk_level: number; cnt: number }[];
+  const lvlTotalMap = new Map<number, number>(lvlTotals.map((r) => [r.hsk_level, r.cnt]));
+
+  // 2. Tiến độ học của user theo từng level HSK
+  const lvlUserRows = db.prepare(`
+    SELECT 
+      cv.hsk_level,
+      SUM(CASE WHEN ucp.status = 'mastered' THEN 1 ELSE 0 END) as mastered,
+      SUM(CASE WHEN ucp.status = 'learning' THEN 1 ELSE 0 END) as learning,
+      SUM(CASE WHEN ucp.status = 'review_later' THEN 1 ELSE 0 END) as review_later
+    FROM chinese_vocabulary cv
+    JOIN user_chinese_progress ucp ON cv.id = ucp.vocabulary_id
+    WHERE ucp.user_id = ?
+    GROUP BY cv.hsk_level
+  `).all(userId) as { hsk_level: number; mastered: number | null; learning: number | null; review_later: number | null }[];
+  const lvlUserMap = new Map<number, { mastered: number; learning: number; review_later: number }>();
+  for (const r of lvlUserRows) {
+    lvlUserMap.set(r.hsk_level, {
+      mastered: r.mastered || 0,
+      learning: r.learning || 0,
+      review_later: r.review_later || 0,
+    });
+  }
+
+  // 3. Tiến độ topic theo từng level HSK
+  const topicRows = db.prepare(`
+    SELECT 
+      cv.hsk_level,
+      cv.topic,
+      COUNT(cv.id) as total,
+      SUM(CASE WHEN ucp.status = 'mastered' THEN 1 ELSE 0 END) as mastered
+    FROM chinese_vocabulary cv
+    LEFT JOIN user_chinese_progress ucp ON cv.id = ucp.vocabulary_id AND ucp.user_id = ?
+    GROUP BY cv.hsk_level, cv.topic
+  `).all(userId) as { hsk_level: number; topic: string; total: number; mastered: number | null }[];
+
+  const topicsByLevelMap = new Map<number, { topic: string; total: number; mastered: number }[]>();
+  for (const r of topicRows) {
+    if (!topicsByLevelMap.has(r.hsk_level)) {
+      topicsByLevelMap.set(r.hsk_level, []);
+    }
+    const mastered = r.mastered || 0;
+    topicsByLevelMap.get(r.hsk_level)!.push({ topic: r.topic, total: r.total, mastered });
+    totalDistinctTopicsCount++;
+    if (r.total > 0 && mastered === r.total) {
+      totalCompletedTopics++;
+    }
+  }
+
   for (let lvl = 1; lvl <= 6; lvl++) {
-    const lvlTotalRow = db.prepare(`
-      SELECT COUNT(*) as cnt FROM chinese_vocabulary WHERE hsk_level = ?
-    `).get(lvl) as { cnt: number };
-    const lvlTotal = lvlTotalRow?.cnt || 0;
+    const lvlTotal = lvlTotalMap.get(lvl) || 0;
+    const userProgress = lvlUserMap.get(lvl) || { mastered: 0, learning: 0, review_later: 0 };
+    const topicsInLvl = topicsByLevelMap.get(lvl) || [];
 
-    const lvlUserRow = db.prepare(`
-      SELECT 
-        SUM(CASE WHEN ucp.status = 'mastered' THEN 1 ELSE 0 END) as mastered,
-        SUM(CASE WHEN ucp.status = 'learning' THEN 1 ELSE 0 END) as learning,
-        SUM(CASE WHEN ucp.status = 'review_later' THEN 1 ELSE 0 END) as review_later
-      FROM chinese_vocabulary cv
-      JOIN user_chinese_progress ucp ON cv.id = ucp.vocabulary_id
-      WHERE cv.hsk_level = ? AND ucp.user_id = ?
-    `).get(lvl, userId) as { mastered: number | null; learning: number | null; review_later: number | null };
-
-    const mastered = lvlUserRow?.mastered || 0;
-    const learning = lvlUserRow?.learning || 0;
-    const review_later_cnt = lvlUserRow?.review_later || 0;
+    const mastered = userProgress.mastered;
+    const learning = userProgress.learning;
+    const review_later_cnt = userProgress.review_later;
     const new_words = Math.max(0, lvlTotal - (mastered + learning + review_later_cnt));
     const progress_percentage = lvlTotal > 0 ? Math.round((mastered / lvlTotal) * 100) : 0;
-
-    // Check topics in this level
-    const topicsInLvl = db.prepare(`
-      SELECT 
-        cv.topic,
-        COUNT(cv.id) as total,
-        SUM(CASE WHEN ucp.status = 'mastered' THEN 1 ELSE 0 END) as mastered
-      FROM chinese_vocabulary cv
-      LEFT JOIN user_chinese_progress ucp ON cv.id = ucp.vocabulary_id AND ucp.user_id = ?
-      WHERE cv.hsk_level = ?
-      GROUP BY cv.topic
-    `).all(userId, lvl) as { topic: string; total: number; mastered: number }[];
-
-    totalDistinctTopicsCount += topicsInLvl.length;
-    for (const t of topicsInLvl) {
-      if (t.total > 0 && t.mastered === t.total) {
-        totalCompletedTopics++;
-      }
-    }
 
     levels.push({
       level: lvl,
@@ -264,6 +289,25 @@ export function updateChineseWordProgress(
     status,
     status
   );
+
+  // Đồng bộ lên Supabase Cloud (đảm bảo dữ liệu bền vững khi deploy Vercel)
+  try {
+    const supabase = getSupabaseAdmin();
+    if (supabase) {
+      const nowIso = new Date().toISOString();
+      supabase.from('user_chinese_progress').upsert({
+        user_id: userId,
+        vocabulary_id: vocabularyId,
+        status,
+        mastery_level: status === 'mastered' ? 5 : status === 'learning' ? 2 : 1,
+        updated_at: nowIso,
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase sync Chinese progress error:', error.message);
+      });
+    }
+  } catch (e) {
+    console.warn('Lỗi gọi Supabase từ updateChineseWordProgress:', e);
+  }
 
   return { success: true, status };
 }

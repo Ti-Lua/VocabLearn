@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
-import { playPronunciation, stopPronunciation } from '@/lib/audio';
+import { playPronunciation, stopPronunciation, getAudioSpeed } from '@/lib/audio';
 import { SupportedLanguageCode } from '@/config/languages';
 
 interface AudioButtonProps {
@@ -47,9 +47,10 @@ export function AudioButton({
 
     setIsPlaying(true);
 
-    // Safety timeout based on sentence length (roughly 250ms per word + 3s buffer)
+    // Safety timeout dynamically adjusted by playback speed so slow audio (e.g. 0.5x) is never prematurely cut off
+    const currentSpeed = getAudioSpeed();
     const wordCount = word.trim().split(/\s+/).length;
-    const safetyDuration = Math.max(2500, wordCount * 500 + 2000);
+    const safetyDuration = Math.max(4000, Math.round(((wordCount * 600) + 3000) / (currentSpeed || 1)));
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {

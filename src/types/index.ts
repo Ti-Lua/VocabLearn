@@ -96,8 +96,41 @@ export interface User {
   email?: string | null;
   username: string;
   full_name: string;
+  display_name?: string;
   avatar_url?: string | null;
   created_at: string;
+  updated_at?: string;
+  last_login_at?: string;
+}
+
+export interface UserStats {
+  user_id: string;
+  total_words_learned: number;
+  total_words_mastered: number;
+  total_topics_completed: number;
+  current_streak: number;
+  longest_streak: number;
+  total_learning_minutes: number;
+  last_learning_date?: string | null;
+  last_book_id?: number | null;
+  last_topic_id?: number | null;
+  last_vocab_id?: number | null;
+  updated_at?: string;
+}
+
+export interface UserTopicProgressDetail {
+  id?: number;
+  user_id: string;
+  topic_id: number;
+  total_words: number;
+  learned_words: number;
+  mastered_words: number;
+  progress_percent: number;
+  status: 'not_started' | 'in_progress' | 'completed';
+  last_vocab_id?: number | null;
+  last_studied_at?: string | null;
+  completed_at?: string | null;
+  best_test_score?: number | null;
 }
 
 export interface UserVocabularyProgress {
@@ -107,8 +140,12 @@ export interface UserVocabularyProgress {
   status: WordStatus;
   correct_count: number;
   wrong_count: number;
+  incorrect_count?: number;
+  review_count?: number;
+  mastery_score?: number;
   last_reviewed_at?: string | null;
   next_review_at?: string | null;
+  created_at?: string;
   updated_at?: string;
 }
 

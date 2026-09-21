@@ -9,9 +9,11 @@
     "lint": "next lint",
     "import:vocabulary": "tsx scripts/importVocabulary.ts",
     "import:hsk": "tsx scripts/importHsk.ts",
-    "generate:vocab-images": "tsx scripts/generateVocabImages.ts"
+    "generate:vocab-images": "tsx scripts/generateVocabImages.ts",
+    "sync:supabase": "tsx scripts/syncToSupabase.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
@@ -19,6 +21,7 @@
     "next": "15.5.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "swr": "^2.5.1",
     "tailwind-merge": "^3.2.0",
     "xlsx": "^0.18.5"
   },
