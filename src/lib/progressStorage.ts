@@ -51,3 +51,18 @@ export function mergeWithLocalProgress<T extends { id: string | number; status?:
     return item;
   });
 }
+
+export function getLocalProgressCounts(userId = 'personal', prefix = 'vocab') {
+  if (typeof window === 'undefined') return { mastered: 0, review: 0, learning: 0, total: 0 };
+  const map = getLocalWordProgress(userId, prefix);
+  let mastered = 0;
+  let review = 0;
+  let learning = 0;
+  for (const status of Object.values(map)) {
+    if (status === 'mastered') mastered++;
+    else if (status === 'review') review++;
+    else if (status === 'learning') learning++;
+  }
+  return { mastered, review, learning, total: mastered + review + learning };
+}
+

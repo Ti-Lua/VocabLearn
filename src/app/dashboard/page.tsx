@@ -24,6 +24,7 @@ import {
   RotateCcw,
   CheckCircle2,
 } from 'lucide-react';
+import { getLocalProgressCounts } from '@/lib/progressStorage';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -36,6 +37,14 @@ export default function DashboardPage() {
   const { chineseStats, isLoading: zhLoading } = useChineseStats();
 
   const [reviewCount, setReviewCount] = useState<number>(0);
+  const [localCounts, setLocalCounts] = useState({ mastered: 0, total: 0 });
+
+  useEffect(() => {
+    setLocalCounts(getLocalProgressCounts('personal'));
+  }, []);
+
+  const displayMastered = Math.max(userStats?.total_words_mastered || 0, localCounts.mastered);
+  const displayLearned = Math.max(userStats?.total_words_learned || 0, localCounts.total);
 
   // Fetch review words count in background
   useEffect(() => {
@@ -272,7 +281,7 @@ export default function DashboardPage() {
                   </span>
                   <div className="flex items-center gap-2 pt-1">
                     <span className="text-2xl sm:text-3xl font-black text-white">
-                      {userStats?.total_words_mastered || 0}
+                      {displayMastered}
                     </span>
                     <span className="text-xs font-bold text-emerald-400">từ</span>
                   </div>
@@ -285,7 +294,7 @@ export default function DashboardPage() {
                   </span>
                   <div className="flex items-center gap-2 pt-1">
                     <span className="text-2xl sm:text-3xl font-black text-white">
-                      {userStats?.total_words_learned || 0}
+                      {displayLearned}
                     </span>
                     <span className="text-xs font-bold text-[#FF202F]">từ</span>
                   </div>

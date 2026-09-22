@@ -23,6 +23,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Vocabulary, Book } from '@/types';
+import { saveLocalWordProgress } from '@/lib/progressStorage';
 
 export default function ReviewPage() {
   const [activeTab, setActiveTab] = useState<'review' | 'mastered'>('review');
@@ -104,6 +105,7 @@ export default function ReviewPage() {
     }
 
     const newStatus = correct ? 'mastered' : 'review';
+    saveLocalWordProgress('personal', currentWord.id, newStatus);
 
     try {
       await fetch('/api/vocabulary/progress', {
@@ -138,6 +140,7 @@ export default function ReviewPage() {
 
   // Đổi từ ĐÃ THUỘC -> CẦN ÔN LẠI (khi quên từ)
   const handleMoveToReview = async (vocab: Vocabulary) => {
+    saveLocalWordProgress('personal', vocab.id, 'review');
     try {
       await fetch('/api/vocabulary/progress', {
         method: 'POST',
@@ -159,6 +162,7 @@ export default function ReviewPage() {
 
   // Đổi từ CẦN ÔN LẠI -> ĐÃ THUỘC
   const handleMarkAsMastered = async (vocab: Vocabulary) => {
+    saveLocalWordProgress('personal', vocab.id, 'mastered');
     try {
       await fetch('/api/vocabulary/progress', {
         method: 'POST',

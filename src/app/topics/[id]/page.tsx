@@ -17,7 +17,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { Topic, Book, Vocabulary, WordStatus } from '@/types';
-import { saveLocalWordProgress } from '@/lib/progressStorage';
+import { saveLocalWordProgress, mergeWithLocalProgress } from '@/lib/progressStorage';
 
 export default function TopicDetailPage() {
   const params = useParams();
@@ -38,7 +38,8 @@ export default function TopicDetailPage() {
         if (data.topic) setTopic(data.topic);
         if (data.book) setBook(data.book);
         if (data.vocabulary) {
-          setVocabulary(data.vocabulary);
+          const merged = mergeWithLocalProgress<Vocabulary>('personal', data.vocabulary);
+          setVocabulary(merged);
         }
       })
       .catch(console.error)
