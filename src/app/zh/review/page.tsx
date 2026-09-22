@@ -150,7 +150,7 @@ export default function ChineseReviewPage() {
         <Sidebar />
 
         {/* Main Content */}
-        <main className="flex-1 max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 lg:pb-8 space-y-6 w-full min-w-0">
+        <main className="flex-1 max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pb-28 lg:pb-8 space-y-6 w-full min-w-0">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -185,7 +185,7 @@ export default function ChineseReviewPage() {
               <span>Lọc theo cấp HSK:</span>
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setSelectedLevel('all')}
@@ -272,7 +272,7 @@ export default function ChineseReviewPage() {
                 height="h-1.5"
               />
 
-              <div className="w-full rounded-3xl bg-[#121212] border border-neutral-800 p-8 flex flex-col justify-between shadow-2xl hover:border-[#FF202F]/50 transition-all space-y-6">
+              <div className="w-full rounded-3xl bg-[#121212] border border-neutral-800 p-5 sm:p-8 flex flex-col justify-between shadow-2xl hover:border-[#FF202F]/50 transition-all space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-400 text-xs font-black uppercase font-mono">
@@ -298,7 +298,7 @@ export default function ChineseReviewPage() {
                 </div>
 
                 <div className="text-center py-4 space-y-2 select-text">
-                  <h2 className="text-5xl sm:text-6xl font-black text-white tracking-[0.16em] pl-[0.16em] font-sans">
+                  <h2 className="text-4xl sm:text-6xl font-black text-white tracking-[0.08em] sm:tracking-[0.16em] pl-[0.08em] sm:pl-[0.16em] font-sans break-words">
                     {currentWord.word}
                   </h2>
                   <p className="text-xl sm:text-2xl font-semibold text-[#FF202F] font-mono tracking-wider">
@@ -356,11 +356,11 @@ export default function ChineseReviewPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => handleUpdateStatus(currentWord.id, 'learning')}
-                  className="py-3 px-2 rounded-2xl bg-[#1c1415] hover:bg-[#25181a] border border-[#FF202F]/40 text-[#FF202F] text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
+                  className="min-h-[46px] py-3 px-2 rounded-2xl bg-[#1c1415] hover:bg-[#25181a] border border-[#FF202F]/40 text-[#FF202F] text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
                 >
                   <XCircle size={16} />
                   <span>Chưa thuộc (1)</span>
@@ -369,7 +369,7 @@ export default function ChineseReviewPage() {
                 <button
                   type="button"
                   onClick={() => handleUpdateStatus(currentWord.id, 'review_later')}
-                  className="py-3 px-2 rounded-2xl bg-[#1c1914] hover:bg-[#262118] border border-amber-500/40 text-amber-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
+                  className="min-h-[46px] py-3 px-2 rounded-2xl bg-[#1c1914] hover:bg-[#262118] border border-amber-500/40 text-amber-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
                 >
                   <RotateCcw size={16} />
                   <span>Ôn lại (2)</span>
@@ -378,7 +378,7 @@ export default function ChineseReviewPage() {
                 <button
                   type="button"
                   onClick={() => handleUpdateStatus(currentWord.id, 'mastered')}
-                  className="py-3 px-2 rounded-2xl bg-[#111c14] hover:bg-[#14261b] border border-emerald-500/40 text-emerald-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
+                  className="min-h-[46px] py-3 px-2 rounded-2xl bg-[#111c14] hover:bg-[#14261b] border border-emerald-500/40 text-emerald-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
                 >
                   <CheckCircle2 size={16} />
                   <span>Đã thuộc (3)</span>

@@ -75,6 +75,30 @@ export default function ChineseTopicDetailPage({
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : 0));
   }, []);
 
+  // Touch swipe handling for mobile & iPad
+  const touchStartXRef = React.useRef<number | null>(null);
+  const touchEndXRef = React.useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndXRef.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartXRef.current === null || touchEndXRef.current === null) return;
+    const diff = touchStartXRef.current - touchEndXRef.current;
+    if (diff > 45) {
+      handleNextCard();
+    } else if (diff < -45) {
+      handlePrevCard();
+    }
+    touchStartXRef.current = null;
+    touchEndXRef.current = null;
+  };
+
   // Update progress handler - immediate 0ms card advance and persistence
   const handleUpdateStatus = useCallback((vocabId: string, status: 'learning' | 'mastered' | 'review_later') => {
     if (!user) return;
@@ -291,11 +315,16 @@ export default function ChineseTopicDetailPage({
                 height="h-1.5"
               />
 
-              {/* Flashcard Component */}
-              <div className="w-full rounded-3xl bg-[#121212] border border-neutral-800 p-8 flex flex-col justify-between shadow-2xl hover:border-[#FF202F]/50 transition-all space-y-6">
+              {/* Flashcard Component with Touch Swipe */}
+              <div
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                className="w-full rounded-3xl bg-[#121212] border border-neutral-800 p-5 sm:p-8 flex flex-col justify-between shadow-2xl hover:border-[#FF202F]/50 transition-all space-y-6 select-none touch-pan-y"
+              >
                 {/* Card Header: Level band, topic tag, Speed control & Audio button */}
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-neutral-850/60">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     <span className="px-2.5 py-1 rounded-lg bg-[#FF202F]/15 border border-[#FF202F]/40 text-[#FF202F] text-xs font-black uppercase font-mono">
                       HSK {levelNum}
                     </span>
@@ -310,7 +339,7 @@ export default function ChineseTopicDetailPage({
                   </div>
 
                   {/* Right side controls: Audio Speed + Copy Word + Audio Pronunciation */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     <AudioSpeedControl size="sm" />
                     <CopyButton
                       text={currentWord.word}
@@ -328,20 +357,20 @@ export default function ChineseTopicDetailPage({
 
                 {/* Center: Very Large Chinese Character with letter spacing & Pinyin */}
                 <div className="text-center py-4 space-y-2 select-text">
-                  <h2 className="text-5xl sm:text-6xl font-black text-white tracking-[0.16em] pl-[0.16em] font-sans">
+                  <h2 className="text-4xl sm:text-6xl font-black text-white tracking-[0.14em] pl-[0.14em] font-sans break-words max-w-full">
                     {currentWord.word}
                   </h2>
-                  <p className="text-xl sm:text-2xl font-semibold text-[#FF202F] font-mono tracking-wider">
+                  <p className="text-lg sm:text-2xl font-semibold text-[#FF202F] font-mono tracking-wider">
                     {currentWord.pinyin}
                   </p>
-                  <p className="text-base sm:text-lg font-bold text-neutral-200 pt-2">
+                  <p className="text-base sm:text-lg font-bold text-neutral-200 pt-1">
                     {currentWord.meaning_vi}
                   </p>
                 </div>
 
                 {/* Examples Section with comfortable spacing & copy */}
                 {currentWord.example_cn && (
-                  <div className="p-4 rounded-2xl bg-[#181818] border border-neutral-800 space-y-2 text-left select-text">
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-[#181818] border border-neutral-800 space-y-2 text-left select-text">
                     <div className="flex items-center justify-between text-[11px] font-bold text-neutral-400">
                       <div className="flex items-center gap-1.5">
                         <span>Câu ví dụ:</span>
@@ -361,14 +390,14 @@ export default function ChineseTopicDetailPage({
                         />
                       </div>
                     </div>
-                    <p className="text-sm sm:text-base font-bold text-white leading-relaxed tracking-[0.08em]">
+                    <p className="text-sm sm:text-base font-bold text-white leading-relaxed tracking-[0.08em] break-words">
                       {currentWord.example_cn}
                     </p>
                     {currentWord.example_pinyin && (
-                      <p className="text-xs text-[#FF202F] font-mono tracking-wide">{currentWord.example_pinyin}</p>
+                      <p className="text-xs text-[#FF202F] font-mono tracking-wide break-words">{currentWord.example_pinyin}</p>
                     )}
                     {currentWord.example_vi && (
-                      <p className="text-xs text-neutral-300 italic">{currentWord.example_vi}</p>
+                      <p className="text-xs text-neutral-300 italic break-words">{currentWord.example_vi}</p>
                     )}
                   </div>
                 )}
@@ -398,18 +427,18 @@ export default function ChineseTopicDetailPage({
                     </span>
                   </div>
 
-                  <span className="text-[11px] text-neutral-400">
+                  <span className="hidden sm:inline text-[11px] text-neutral-400">
                     Phím tắt: [1] Chưa thuộc • [2] Ôn lại • [3] Đã thuộc • [Space] Nghe
                   </span>
                 </div>
               </div>
 
-              {/* 3 Action Buttons */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* 3 Action Buttons - Thumb-friendly tap targets */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => handleUpdateStatus(currentWord.id, 'learning')}
-                  className="py-3 px-2 rounded-2xl bg-[#1c1415] hover:bg-[#25181a] border border-[#FF202F]/40 text-[#FF202F] text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
+                  className="min-h-[48px] py-3 px-2 rounded-2xl bg-[#1c1415] hover:bg-[#25181a] border border-[#FF202F]/40 text-[#FF202F] text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
                 >
                   <XCircle size={16} />
                   <span>Chưa thuộc (1)</span>
@@ -418,7 +447,7 @@ export default function ChineseTopicDetailPage({
                 <button
                   type="button"
                   onClick={() => handleUpdateStatus(currentWord.id, 'review_later')}
-                  className="py-3 px-2 rounded-2xl bg-[#1c1914] hover:bg-[#262118] border border-amber-500/40 text-amber-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
+                  className="min-h-[48px] py-3 px-2 rounded-2xl bg-[#1c1914] hover:bg-[#262118] border border-amber-500/40 text-amber-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
                 >
                   <RotateCcw size={16} />
                   <span>Ôn lại (2)</span>
@@ -427,32 +456,37 @@ export default function ChineseTopicDetailPage({
                 <button
                   type="button"
                   onClick={() => handleUpdateStatus(currentWord.id, 'mastered')}
-                  className="py-3 px-2 rounded-2xl bg-[#111c14] hover:bg-[#14261b] border border-emerald-500/40 text-emerald-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
+                  className="min-h-[48px] py-3 px-2 rounded-2xl bg-[#111c14] hover:bg-[#14261b] border border-emerald-500/40 text-emerald-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow"
                 >
                   <CheckCircle2 size={16} />
                   <span>Đã thuộc (3)</span>
                 </button>
               </div>
 
+              {/* Swipe indicator on mobile */}
+              <div className="md:hidden text-[11px] text-neutral-500 text-center font-medium">
+                👈 Vuốt ngang thẻ để chuyển từ tiếp theo 👉
+              </div>
+
               {/* Bottom Nav: Prev / Next buttons */}
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-1">
                 <button
                   type="button"
                   onClick={handlePrevCard}
                   disabled={currentIndex === 0}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-300 text-xs font-bold disabled:opacity-30 transition-colors"
+                  className="min-h-[44px] flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-300 text-xs font-bold disabled:opacity-30 transition-colors"
                 >
                   <ChevronLeft size={16} />
-                  <span>Từ trước (←)</span>
+                  <span>Từ trước</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleNextCard}
                   disabled={currentIndex === words.length - 1}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-300 text-xs font-bold disabled:opacity-30 transition-colors"
+                  className="min-h-[44px] flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] text-neutral-300 text-xs font-bold disabled:opacity-30 transition-colors"
                 >
-                  <span>Từ tiếp theo (→)</span>
+                  <span>Tiếp theo</span>
                   <ChevronRight size={16} />
                 </button>
               </div>
@@ -500,8 +534,87 @@ export default function ChineseTopicDetailPage({
                 </div>
               </div>
 
-              {/* Words Table */}
-              <div className="rounded-2xl bg-[#121212] border border-neutral-800 overflow-hidden shadow-xl">
+              {/* Mobile Card List (Visible on < 768px) */}
+              <div className="md:hidden space-y-3">
+                {filteredWords.map((w) => (
+                  <div
+                    key={w.id}
+                    className="p-4 rounded-2xl bg-[#121212] border border-neutral-800 shadow-md space-y-3"
+                  >
+                    {/* Header: HSK level, Pinyin, Audio, Copy */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 font-bold">
+                            HSK {w.hsk_level}
+                          </span>
+                          <span
+                            className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${
+                              w.status === 'mastered'
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : w.status === 'review_later'
+                                ? 'bg-amber-500/20 text-amber-400'
+                                : w.status === 'learning'
+                                ? 'bg-[#FF202F]/20 text-[#FF202F]'
+                                : 'bg-neutral-800 text-neutral-400'
+                            }`}
+                          >
+                            {w.status === 'mastered'
+                              ? 'Đã thuộc'
+                              : w.status === 'review_later'
+                              ? 'Cần ôn lại'
+                              : w.status === 'learning'
+                              ? 'Đang học'
+                              : 'Mới'}
+                          </span>
+                        </div>
+                        <h3 className="text-2xl font-black text-white font-sans tracking-[0.1em] select-text">
+                          {w.word}
+                        </h3>
+                        <p className="text-xs text-[#FF202F] font-mono font-semibold">{w.pinyin}</p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <CopyButton text={w.word} size="sm" title="Sao chép chữ Hán" />
+                        <AudioButton word={w.word} audioUrl={w.word} langCode="zh" size="sm" />
+                      </div>
+                    </div>
+
+                    {/* Meaning */}
+                    <div className="text-sm font-semibold text-neutral-200 bg-[#181818] p-2.5 rounded-xl border border-neutral-800/80">
+                      {w.meaning_vi}
+                    </div>
+
+                    {/* Mobile Quick Action Buttons */}
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-neutral-850">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus(w.id, 'learning')}
+                        className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-[#FF202F]/20 text-neutral-400 hover:text-[#FF202F] text-xs font-bold transition-colors"
+                      >
+                        Chưa thuộc
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus(w.id, 'review_later')}
+                        className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-amber-500/20 text-neutral-400 hover:text-amber-400 text-xs font-bold transition-colors"
+                      >
+                        Ôn lại
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus(w.id, 'mastered')}
+                        className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-emerald-500/20 text-neutral-400 hover:text-emerald-400 text-xs font-bold transition-colors"
+                      >
+                        Đã thuộc
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Words Table (Visible on >= 768px) */}
+              <div className="hidden md:block rounded-2xl bg-[#121212] border border-neutral-800 overflow-hidden shadow-xl">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-[#181818] text-neutral-400 font-semibold border-b border-neutral-800">

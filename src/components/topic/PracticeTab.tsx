@@ -577,7 +577,7 @@ export function PracticeTab({
 
         {/* TYPE 4: Matching */}
         {currentQ.type === 'matching' && currentQ.matchingPairs && (
-          <div className="grid grid-cols-2 gap-4 pt-2">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-4 pt-2">
             {/* Left: Words */}
             <div className="space-y-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-1">
@@ -589,7 +589,7 @@ export function PracticeTab({
 
                 let style = 'bg-[#181818] text-white border-neutral-800 hover:border-neutral-700';
                 if (isMatched) style = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 opacity-80';
-                else if (isSelected) style = 'bg-[#FF202F]/20 text-[#FF202F] border-[#FF202F] font-bold';
+                else if (isSelected) style = 'bg-[#FF202F]/20 text-[#FF202F] border-[#FF202F] font-bold shadow-md shadow-[#FF202F]/15';
 
                 return (
                   <button
@@ -597,9 +597,9 @@ export function PracticeTab({
                     type="button"
                     disabled={isMatched}
                     onClick={() => handleMatchWordClick(pair.word)}
-                    className={`w-full min-h-[44px] p-2.5 sm:p-3 rounded-xl border text-xs font-bold transition-all text-left flex items-center ${style}`}
+                    className={`w-full min-h-[48px] p-2.5 sm:p-3.5 rounded-xl border text-xs sm:text-sm font-bold transition-all text-left flex items-center ${style}`}
                   >
-                    <span className="line-clamp-2">{pair.word}</span>
+                    <span className="line-clamp-3 break-words">{pair.word}</span>
                   </button>
                 );
               })}
@@ -622,9 +622,9 @@ export function PracticeTab({
                     type="button"
                     disabled={isMatched}
                     onClick={() => handleMatchMeaningClick(pair.meaning, pair.word)}
-                    className={`w-full min-h-[44px] p-2.5 sm:p-3 rounded-xl border text-xs transition-all text-left flex items-center ${style}`}
+                    className={`w-full min-h-[48px] p-2.5 sm:p-3.5 rounded-xl border text-xs sm:text-sm transition-all text-left flex items-center ${style}`}
                   >
-                    <span className="line-clamp-2 leading-tight">{pair.meaning}</span>
+                    <span className="line-clamp-3 leading-snug break-words">{pair.meaning}</span>
                   </button>
                 );
               })}

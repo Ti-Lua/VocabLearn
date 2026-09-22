@@ -186,7 +186,7 @@ export default function ProfilePage() {
       <div className="flex-1 flex">
         <Sidebar />
 
-        <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 space-y-8">
+        <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-28 lg:pb-8 space-y-8">
           {/* Header Bar */}
           <div className="flex items-center gap-3">
             <button

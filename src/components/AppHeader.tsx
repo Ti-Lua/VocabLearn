@@ -30,23 +30,23 @@ export function AppHeader({ streakDays = 0, onToggleMobileSidebar }: AppHeaderPr
 
   return (
     <header className="sticky top-0 z-30 w-full bg-[#0d0d0d]/90 backdrop-blur-md border-b border-neutral-800/80">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-1.5 sm:gap-3">
         {/* Left: Hamburger (Mobile/Tablet), Brand Logo, and Account Switcher */}
-        <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           {/* Hamburger button visible on mobile and tablet */}
           <button
             type="button"
             onClick={handleToggleSidebar}
             aria-label="Mở menu danh mục"
-            className="lg:hidden p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors focus:outline-none flex-shrink-0"
+            className="lg:hidden p-1.5 sm:p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors focus:outline-none flex-shrink-0"
           >
             <Menu size={20} />
           </button>
 
           {/* Logo brand linking to home language menu */}
-          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group flex-shrink-0">
+          <Link href="/" className="flex items-center gap-1.5 sm:gap-2.5 group flex-shrink-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-[#D91827] to-[#FF202F] flex items-center justify-center text-white shadow-lg shadow-[#FF202F]/25 group-hover:scale-105 transition-transform duration-200 flex-shrink-0">
-              <BookOpen size={18} className="stroke-[2.5]" />
+              <BookOpen size={17} className="stroke-[2.5]" />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
@@ -60,78 +60,78 @@ export function AppHeader({ streakDays = 0, onToggleMobileSidebar }: AppHeaderPr
             </div>
           </Link>
 
-          {/* Segmented Account Switcher (Tí Lửa | Tí Điệu) - Styled identical to 3-language switcher */}
+          {/* Segmented Account Switcher (Tí Lửa | Tí Điệu) - Responsive compact mode on mobile */}
           <div className="flex items-center bg-[#181818] rounded-xl p-0.5 border border-neutral-800 text-xs font-semibold flex-shrink-0">
             <button
               type="button"
               onClick={() => switchProfile('tilua')}
               title="Chuyển sang tài khoản Tí Lửa"
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 sm:gap-1.5 ${
+              className={`px-1.5 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 sm:gap-1.5 ${
                 profileKey === 'tilua'
                   ? 'bg-gradient-to-r from-[#D91827] to-[#FF202F] text-white shadow font-bold'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
-              <span>🔥</span>
-              <span className="text-[11px] sm:text-xs">Tí Lửa</span>
+              <span className="text-xs">🔥</span>
+              <span className="hidden sm:inline text-[11px] sm:text-xs">Tí Lửa</span>
             </button>
             <button
               type="button"
               onClick={() => switchProfile('tidieu')}
               title="Chuyển sang tài khoản Tí Điệu"
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 sm:gap-1.5 ${
+              className={`px-1.5 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 sm:gap-1.5 ${
                 profileKey === 'tidieu'
                   ? 'bg-gradient-to-r from-[#D91827] to-[#FF202F] text-white shadow font-bold'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
-              <span>🌸</span>
-              <span className="text-[11px] sm:text-xs">Tí Điệu</span>
+              <span className="text-xs">🌸</span>
+              <span className="hidden sm:inline text-[11px] sm:text-xs">Tí Điệu</span>
             </button>
           </div>
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2.5 flex-shrink-0">
           {/* Language Switcher */}
           <div className="flex items-center bg-[#181818] rounded-xl p-0.5 border border-neutral-800 text-xs font-semibold">
             <button
               type="button"
               onClick={() => setLanguage('en')}
               title="Học Tiếng Anh"
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+              className={`px-1.5 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
                 currentLanguage === 'en'
                   ? 'bg-[#FF202F] text-white shadow'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
               <span>🇬🇧</span>
-              <span className="hidden sm:inline">EN</span>
+              <span className="hidden md:inline">EN</span>
             </button>
             <button
               type="button"
               onClick={() => setLanguage('zh')}
               title="Học Tiếng Trung HSK"
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+              className={`px-1.5 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
                 currentLanguage === 'zh'
                   ? 'bg-[#FF202F] text-white shadow'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
               <span>🇨🇳</span>
-              <span className="hidden sm:inline">中文</span>
+              <span className="hidden md:inline">中文</span>
             </button>
             <Link
               href="/languages"
               title="Tiếng Nhật (Sắp ra mắt)"
-              className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 ${
+              className={`px-1.5 sm:px-2 py-1 rounded-lg transition-all flex items-center gap-1 ${
                 currentLanguage === 'ja'
                   ? 'bg-[#FF202F] text-white shadow'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
               <span>🇯🇵</span>
-              <span className="hidden sm:inline text-[11px]">JA</span>
+              <span className="hidden md:inline text-[11px]">JA</span>
             </Link>
           </div>
 
@@ -168,10 +168,10 @@ export function AppHeader({ streakDays = 0, onToggleMobileSidebar }: AppHeaderPr
           {/* Personal Profile Streak Section */}
           <Link
             href="/statistics"
-            className="flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-lg bg-[#1a1415] border border-[#FF202F]/30 text-xs font-bold text-[#FF202F] hover:bg-[#FF202F]/10 transition-colors"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-lg bg-[#1a1415] border border-[#FF202F]/30 text-xs font-bold text-[#FF202F] hover:bg-[#FF202F]/10 transition-colors"
             title="Chuỗi ngày học liên tục"
           >
-            <Flame size={15} className="fill-[#FF202F] animate-pulse" />
+            <Flame size={14} className="fill-[#FF202F] animate-pulse" />
             <span>{streakDays || 1}</span>
             <span className="hidden sm:inline">ngày</span>
           </Link>

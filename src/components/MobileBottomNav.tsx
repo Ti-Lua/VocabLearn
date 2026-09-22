@@ -32,7 +32,7 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label="Mobile navigation"
-      className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-[#0d0d0d]/95 backdrop-blur-xl border-t border-neutral-800/80 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_25px_rgba(0,0,0,0.5)]"
+      className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-[#0d0d0d]/95 backdrop-blur-xl border-t border-neutral-800/80 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_25px_rgba(0,0,0,0.5)] md:bottom-4 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[92%] md:max-w-md md:rounded-2xl md:border md:border-neutral-800 md:shadow-[0_10px_35px_rgba(0,0,0,0.7)] md:py-2 md:px-4 transition-all"
       style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
     >
       {/* 1. Dashboard */}

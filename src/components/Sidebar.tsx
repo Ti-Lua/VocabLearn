@@ -461,7 +461,7 @@ export function Sidebar() {
 
       {/* 2. Mobile & iPad Off-canvas Drawer */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-[#0d0d0d] border-r border-neutral-800 p-4 flex flex-col justify-between select-none shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-[85vw] max-w-xs sm:w-80 bg-[#0d0d0d] border-r border-neutral-800 p-4 pt-safe pb-safe flex flex-col justify-between select-none shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >
@@ -489,7 +489,7 @@ export function Sidebar() {
         </div>
 
         {/* Drawer Scrollable Navigation */}
-        <div className="flex-1 overflow-y-auto pr-1">
+        <div className="flex-1 overflow-y-auto pr-1 touch-scroll">
           {renderNavContent(true)}
         </div>
 

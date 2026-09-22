@@ -27,23 +27,23 @@ export function LanguageSelectionView() {
     <div className="min-h-screen bg-[#080808] flex flex-col selection:bg-[#FF202F] selection:text-white">
       <AppHeader />
 
-      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center justify-center">
+      <main className="flex-1 max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-12 flex flex-col items-center justify-center w-full">
         {/* Title Section */}
-        <div className="text-center max-w-2xl mb-12">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#FF202F]/10 border border-[#FF202F]/30 text-xs font-bold text-[#FF202F] mb-4 shadow-sm">
+        <div className="text-center max-w-2xl mb-6 sm:mb-12">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#FF202F]/10 border border-[#FF202F]/30 text-xs font-bold text-[#FF202F] mb-3 sm:mb-4 shadow-sm">
             <Sparkles size={14} />
             <span>Nền tảng học từ vựng thực tế</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
             Bạn muốn học ngôn ngữ nào hôm nay?
           </h1>
-          <p className="text-neutral-400 text-sm mt-3 leading-relaxed">
+          <p className="text-neutral-400 text-xs sm:text-sm mt-2 sm:mt-3 leading-relaxed">
             Chọn lộ trình ngôn ngữ bạn muốn chinh phục. Giáo trình được số hóa chuẩn xác kèm audio giọng đọc AI và phương pháp lặp lại ngắt quãng SRS.
           </p>
         </div>
 
         {/* 3 Balanced Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 w-full max-w-5xl">
           {languages.map((lang) => {
             const isActive = lang.status === 'active';
 
@@ -51,7 +51,7 @@ export function LanguageSelectionView() {
               <div
                 key={lang.id}
                 onClick={() => handleSelectLanguage(lang.code)}
-                className={`group relative rounded-3xl p-6 sm:p-7 transition-all duration-300 flex flex-col justify-between min-h-[380px] border cursor-pointer ${
+                className={`group relative rounded-3xl p-5 sm:p-7 transition-all duration-300 flex flex-col justify-between min-h-[320px] sm:min-h-[380px] border cursor-pointer ${
                   isActive
                     ? 'bg-[#121212] border-neutral-800 hover:border-[#FF202F]/60 hover:shadow-2xl hover:shadow-[#FF202F]/15 hover:-translate-y-1.5'
                     : 'bg-[#101010] border-neutral-850 hover:border-neutral-700 hover:shadow-lg hover:-translate-y-1'

@@ -216,7 +216,7 @@ export default function ReviewPage() {
       <div className="flex-1 flex">
         <Sidebar />
 
-        <main className="flex-1 max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 lg:pb-8 space-y-6 w-full min-w-0">
+        <main className="flex-1 max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pb-28 lg:pb-8 space-y-6 w-full min-w-0">
           {/* Header Title */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -294,7 +294,7 @@ export default function ReviewPage() {
                 <div className="space-y-6">
                   {/* Filter by Book & Search */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
                       <span className="text-xs text-neutral-400 flex items-center gap-1 font-semibold flex-shrink-0">
                         <Filter size={14} /> Sách:
                       </span>
@@ -499,7 +499,7 @@ export default function ReviewPage() {
                   {/* Interactive Card */}
                   <div
                     onClick={() => setIsFlipped(!isFlipped)}
-                    className="min-h-[320px] rounded-3xl bg-[#121212] border border-neutral-800 p-8 flex flex-col justify-between cursor-pointer hover:border-neutral-700 transition-all shadow-2xl relative select-none"
+                    className="min-h-[300px] sm:min-h-[320px] rounded-3xl bg-[#121212] border border-neutral-800 p-5 sm:p-8 flex flex-col justify-between cursor-pointer hover:border-neutral-700 transition-all shadow-2xl relative select-none"
                   >
                     <div className="flex justify-between items-start">
                       <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
@@ -514,7 +514,7 @@ export default function ReviewPage() {
                     <div className="text-center py-6 space-y-3">
                       {!isFlipped ? (
                         <>
-                          <h2 className="text-4xl font-black text-white">{currentWord.word}</h2>
+                          <h2 className="text-3xl sm:text-4xl font-black text-white break-words">{currentWord.word}</h2>
                           {currentWord.ipa && (
                             <p className="text-base text-neutral-400 font-mono">/{currentWord.ipa}/</p>
                           )}
@@ -542,11 +542,11 @@ export default function ReviewPage() {
 
                   {/* Actions */}
                   {!isAnswered ? (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <button
                         type="button"
                         onClick={() => handleAnswerReview(false)}
-                        className="py-3 rounded-2xl bg-[#1a1415] border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 font-bold text-xs transition-all flex items-center justify-center gap-2"
+                        className="min-h-[46px] py-3 rounded-2xl bg-[#1a1415] border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 font-bold text-xs transition-all flex items-center justify-center gap-2"
                       >
                         <RotateCcw size={16} />
                         <span>Chưa thuộc (Ôn lại tiếp)</span>
@@ -555,7 +555,7 @@ export default function ReviewPage() {
                       <button
                         type="button"
                         onClick={() => handleAnswerReview(true)}
-                        className="py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition-all shadow flex items-center justify-center gap-2"
+                        className="min-h-[46px] py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition-all shadow flex items-center justify-center gap-2"
                       >
                         <CheckCircle2 size={16} />
                         <span>Đã thuộc từ này</span>
@@ -565,7 +565,7 @@ export default function ReviewPage() {
                     <button
                       type="button"
                       onClick={handleNextReviewWord}
-                      className="w-full py-3.5 rounded-2xl bg-[#FF202F] hover:bg-[#D91827] text-white font-bold text-xs transition-all shadow-lg flex items-center justify-center gap-2"
+                      className="w-full min-h-[46px] py-3.5 rounded-2xl bg-[#FF202F] hover:bg-[#D91827] text-white font-bold text-xs transition-all shadow-lg flex items-center justify-center gap-2"
                     >
                       <span>Từ tiếp theo</span>
                       <ArrowRight size={16} />
@@ -621,7 +621,7 @@ export default function ReviewPage() {
             <div className="space-y-6">
               {/* Filter by Book & Search */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
                   <span className="text-xs text-neutral-400 flex items-center gap-1 font-semibold flex-shrink-0">
                     <Filter size={14} /> Sách:
                   </span>

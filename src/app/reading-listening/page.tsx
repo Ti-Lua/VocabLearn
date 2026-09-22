@@ -267,52 +267,52 @@ export default function ReadingListeningPage() {
 
           {/* Audio Player & Reader Settings Bar */}
           {selectedArticle && (
-            <div className="sticky top-2 z-20 rounded-2xl bg-[#121212]/95 backdrop-blur-md border border-neutral-800 p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
-              {/* Play / Pause & Paragraph Status */}
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isPlaying) {
-                      handleStopAudio();
-                    } else {
-                      handlePlayParagraph(playingParagraphIndex ?? 0);
-                    }
-                  }}
-                  className="w-11 h-11 rounded-full bg-[#FF202F] hover:bg-[#D91827] text-white flex items-center justify-center shadow-lg shadow-[#FF202F]/25 transition-transform active:scale-95"
-                  title={isPlaying ? 'Tạm dừng đọc' : 'Đọc toàn bài báo'}
-                >
-                  {isPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
-                </button>
+            <div className="sticky top-2 z-20 rounded-2xl bg-[#121212]/95 backdrop-blur-md border border-neutral-800 p-3 sm:p-4 shadow-xl space-y-2.5">
+              {/* Row 1: Play/Pause, Status, and Voice Selector */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isPlaying) {
+                        handleStopAudio();
+                      } else {
+                        handlePlayParagraph(playingParagraphIndex ?? 0);
+                      }
+                    }}
+                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#FF202F] hover:bg-[#D91827] text-white flex items-center justify-center shadow-lg shadow-[#FF202F]/25 transition-transform active:scale-95 shrink-0"
+                    title={isPlaying ? 'Tạm dừng đọc' : 'Đọc bài báo'}
+                  >
+                    {isPlaying ? <Pause size={17} /> : <Play size={17} className="ml-0.5" />}
+                  </button>
 
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white">
-                      {isPlaying
-                        ? `Đang đọc đoạn ${(playingParagraphIndex ?? 0) + 1} / ${selectedArticle.paragraphs.length}`
-                        : 'Sẵn sàng nghe báo đọc'}
-                    </span>
-                    {isPlaying && (
-                      <span className="flex h-2 w-2 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF202F] opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF202F]" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-white truncate">
+                        {isPlaying
+                          ? `Đang đọc đoạn ${(playingParagraphIndex ?? 0) + 1}/${selectedArticle.paragraphs.length}`
+                          : 'Sẵn sàng nghe báo đọc'}
                       </span>
-                    )}
+                      {isPlaying && (
+                        <span className="flex h-2 w-2 relative shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF202F] opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF202F]" />
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] sm:text-[11px] text-neutral-400 font-mono truncate block">
+                      Google Studio AI
+                    </span>
                   </div>
-                  <span className="text-[11px] text-neutral-400">Google AI Studio • {selectedVoice}</span>
                 </div>
-              </div>
 
-              {/* Voice & Speed Controls */}
-              <div className="flex items-center gap-3">
                 {/* Voice Selector */}
-                <div className="flex items-center gap-1.5 text-xs text-neutral-400">
+                <div className="flex items-center gap-1.5 text-xs text-neutral-400 shrink-0">
                   <Volume2 size={14} className="text-[#FF202F]" />
-                  <span className="hidden sm:inline">Giọng đọc:</span>
                   <select
                     value={selectedVoice}
                     onChange={(e) => setSelectedVoice(e.target.value as GoogleVoiceId)}
-                    className="bg-[#181818] border border-neutral-800 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-[#FF202F]"
+                    className="bg-[#181818] border border-neutral-800 text-white rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#FF202F]"
                   >
                     {GOOGLE_TTS_VOICES.map((v) => (
                       <option key={v.id} value={v.id}>
@@ -321,9 +321,12 @@ export default function ReadingListeningPage() {
                     ))}
                   </select>
                 </div>
+              </div>
 
+              {/* Row 2: Speed Switcher & Display Mode (Song ngữ / EN / VI) */}
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-neutral-850/60 overflow-x-auto no-scrollbar">
                 {/* Speed Switcher */}
-                <div className="flex items-center gap-1 bg-[#181818] p-1 rounded-xl border border-neutral-800 text-[11px] font-bold">
+                <div className="flex items-center gap-0.5 sm:gap-1 bg-[#181818] p-0.5 sm:p-1 rounded-xl border border-neutral-800 text-[10px] sm:text-[11px] font-bold shrink-0">
                   {[0.5, 0.75, 1.0, 1.25, 1.5].map((speed) => {
                     const isActive = Math.abs(playbackSpeed - speed) < 0.05;
                     return (
@@ -332,9 +335,9 @@ export default function ReadingListeningPage() {
                         type="button"
                         onClick={() => handleSpeedSelect(speed)}
                         title={`Tốc độ đọc ${speed}x`}
-                        className={`px-2 py-0.5 rounded-lg transition-all active:scale-95 ${
+                        className={`px-1.5 sm:px-2 py-0.5 rounded-lg transition-all active:scale-95 ${
                           isActive
-                            ? 'bg-[#FF202F] text-white shadow-sm shadow-[#FF202F]/30 scale-105'
+                            ? 'bg-[#FF202F] text-white shadow-sm shadow-[#FF202F]/30 font-extrabold'
                             : 'text-neutral-400 hover:text-white'
                         }`}
                       >
@@ -345,11 +348,11 @@ export default function ReadingListeningPage() {
                 </div>
 
                 {/* Display Mode Switcher */}
-                <div className="flex items-center gap-1 bg-[#181818] p-1 rounded-xl border border-neutral-800 text-[11px] font-bold">
+                <div className="flex items-center gap-1 bg-[#181818] p-0.5 sm:p-1 rounded-xl border border-neutral-800 text-[10px] sm:text-[11px] font-bold shrink-0">
                   <button
                     type="button"
                     onClick={() => setDisplayMode('bilingual')}
-                    className={`px-2.5 py-1 rounded-lg transition-colors ${
+                    className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg transition-colors ${
                       displayMode === 'bilingual'
                         ? 'bg-[#FF202F] text-white shadow'
                         : 'text-neutral-400 hover:text-white'
@@ -360,7 +363,7 @@ export default function ReadingListeningPage() {
                   <button
                     type="button"
                     onClick={() => setDisplayMode('english')}
-                    className={`px-2.5 py-1 rounded-lg transition-colors ${
+                    className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg transition-colors ${
                       displayMode === 'english'
                         ? 'bg-[#FF202F] text-white shadow'
                         : 'text-neutral-400 hover:text-white'
@@ -371,7 +374,7 @@ export default function ReadingListeningPage() {
                   <button
                     type="button"
                     onClick={() => setDisplayMode('vietnamese')}
-                    className={`px-2.5 py-1 rounded-lg transition-colors ${
+                    className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg transition-colors ${
                       displayMode === 'vietnamese'
                         ? 'bg-[#FF202F] text-white shadow'
                         : 'text-neutral-400 hover:text-white'

@@ -71,7 +71,7 @@ export default function DashboardPage() {
         <Sidebar />
 
         {/* Main Content */}
-        <main className="flex-1 max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 lg:pb-8 space-y-6 sm:space-y-8 w-full min-w-0">
+        <main className="flex-1 max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pb-28 lg:pb-8 space-y-6 sm:space-y-8 w-full min-w-0">
           {loading ? (
             <div className="py-24 text-center space-y-3">
               <div className="w-8 h-8 border-2 border-[#FF202F] border-t-transparent rounded-full animate-spin mx-auto" />

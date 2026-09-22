@@ -353,7 +353,7 @@ export function TestTab({
       <ProgressBar progress={((currentIndex + 1) / questions.length) * 100} height="h-1.5" />
 
       {/* Main Question Card */}
-      <div className="rounded-3xl bg-[#121212] border border-neutral-800 p-6 sm:p-8 space-y-6 shadow-2xl">
+      <div className="rounded-3xl bg-[#121212] border border-neutral-800 p-4 sm:p-8 space-y-5 sm:space-y-6 shadow-2xl">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-neutral-850 text-neutral-300 font-mono">
             {currentQ.type === 'fill_blank'
@@ -368,11 +368,11 @@ export function TestTab({
 
         {/* Prompt */}
         <div className="space-y-2 text-center py-2">
-          <h3 className="text-xl sm:text-2xl font-bold text-white leading-relaxed">
+          <h3 className="text-lg sm:text-2xl font-bold text-white leading-relaxed">
             {currentQ.prompt}
           </h3>
           {currentQ.subPrompt && (
-            <p className="text-sm font-medium text-neutral-400">{currentQ.subPrompt}</p>
+            <p className="text-xs sm:text-sm font-medium text-neutral-400">{currentQ.subPrompt}</p>
           )}
         </div>
 
@@ -384,7 +384,7 @@ export function TestTab({
               value={currentAnswer}
               onChange={(e) => handleAnswerSelect(e.target.value)}
               placeholder="Nhập câu trả lời của bạn..."
-              className="w-full text-center text-lg font-bold py-3 px-4 rounded-xl bg-[#181818] border border-neutral-700 text-white placeholder-neutral-500 focus:outline-none focus:border-[#FF202F] transition-all"
+              className="w-full text-center text-base sm:text-lg font-bold py-3 px-4 rounded-xl bg-[#181818] border border-neutral-700 text-white placeholder-neutral-500 focus:outline-none focus:border-[#FF202F] transition-all"
             />
           </div>
         )}
@@ -399,14 +399,14 @@ export function TestTab({
                   key={i}
                   type="button"
                   onClick={() => handleAnswerSelect(opt)}
-                  className={`p-4 rounded-2xl border text-left text-sm transition-all flex items-center justify-between ${
+                  className={`p-3.5 sm:p-4 rounded-2xl border text-left text-xs sm:text-sm transition-all flex items-center justify-between min-h-[48px] ${
                     isSelected
                       ? 'bg-[#FF202F]/15 border-[#FF202F] text-white font-bold'
                       : 'bg-[#181818] text-neutral-300 border-neutral-800 hover:border-neutral-700'
                   }`}
                 >
-                  <span>{opt}</span>
-                  {isSelected && <CheckCircle2 size={16} className="text-[#FF202F]" />}
+                  <span className="break-words">{opt}</span>
+                  {isSelected && <CheckCircle2 size={16} className="text-[#FF202F] shrink-0 ml-2" />}
                 </button>
               );
             })}
@@ -419,14 +419,14 @@ export function TestTab({
             <p className="text-xs text-neutral-400 text-center">
               Khớp nghĩa từ vựng tiếng Anh với nghĩa tiếng Việt:
             </p>
-            <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs">
               {currentQ.matchingPairs.map((p) => (
                 <div
                   key={p.id}
-                  className="p-3 rounded-xl bg-[#181818] border border-neutral-800 flex justify-between items-center"
+                  className="p-3 rounded-xl bg-[#181818] border border-neutral-800 flex justify-between items-center gap-2"
                 >
-                  <span className="font-bold text-white">{p.word}</span>
-                  <span className="text-neutral-400 font-medium">{p.meaning}</span>
+                  <span className="font-bold text-white break-words">{p.word}</span>
+                  <span className="text-neutral-400 font-medium text-right break-words">{p.meaning}</span>
                 </div>
               ))}
             </div>

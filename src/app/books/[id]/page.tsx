@@ -73,7 +73,7 @@ export default function BookDetailPage() {
       <div className="flex-1 flex">
         <Sidebar />
 
-        <main className="flex-1 max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 lg:pb-8 space-y-6 w-full min-w-0">
+        <main className="flex-1 max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pb-28 lg:pb-8 space-y-6 w-full min-w-0">
           {/* Breadcrumb navigation */}
           <div className="flex items-center gap-2 text-xs text-neutral-400">
             <Link href="/vocab" className="hover:text-white flex items-center gap-1">

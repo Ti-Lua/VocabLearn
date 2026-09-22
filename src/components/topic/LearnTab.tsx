@@ -48,6 +48,30 @@ export function LearnTab({
   const hasAutoResumedRef = useRef(false);
   const currentTopicIdRef = useRef<number | null>(null);
 
+  // Touch swipe handling for mobile & iPad
+  const touchStartXRef = useRef<number | null>(null);
+  const touchEndXRef = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndXRef.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartXRef.current === null || touchEndXRef.current === null) return;
+    const diff = touchStartXRef.current - touchEndXRef.current;
+    if (diff > 45) {
+      handleNext();
+    } else if (diff < -45) {
+      handlePrev();
+    }
+    touchStartXRef.current = null;
+    touchEndXRef.current = null;
+  };
+
   // Sync items when vocabulary prop changes, without forcibly resetting currentIndex
   useEffect(() => {
     setItems((prev) => {
@@ -399,20 +423,25 @@ export function LearnTab({
 
           <ProgressBar progress={((currentIndex + 1) / items.length) * 100} height="h-1.5" />
 
-          {/* Flashcard Component */}
-          <div className="group relative w-full min-h-[380px] rounded-3xl bg-[#121212] border border-neutral-800 hover:border-[#FF202F]/40 transition-all duration-300 shadow-2xl p-6 sm:p-8 flex flex-col justify-between">
+          {/* Flashcard Component with Touch Swipe */}
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            className="group relative w-full min-h-[350px] sm:min-h-[380px] rounded-3xl bg-[#121212] border border-neutral-800 hover:border-[#FF202F]/40 transition-all duration-300 shadow-2xl p-5 sm:p-8 flex flex-col justify-between select-none touch-pan-y"
+          >
             {/* Top row: Level band (Góc trái), Loại từ & Google AI Audio (Góc phải) */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-neutral-850/60">
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-xl bg-[#FF202F]/15 border border-[#FF202F]/40 text-[#FF202F] text-xs font-black tracking-wider uppercase font-mono shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-neutral-850/60">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="px-2.5 sm:px-3 py-1 rounded-xl bg-[#FF202F]/15 border border-[#FF202F]/40 text-[#FF202F] text-xs font-black tracking-wider uppercase font-mono shadow-sm">
                   {currentWord.level || 'CEFR'}
                 </span>
-                <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-xl bg-neutral-850 text-neutral-300 font-mono border border-neutral-800">
+                <span className="text-xs font-bold uppercase tracking-wider px-2 sm:px-2.5 py-1 rounded-xl bg-neutral-850 text-neutral-300 font-mono border border-neutral-800">
                   {currentWord.part_of_speech || 'vocabulary'}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <AudioSpeedControl size="sm" />
                 <CopyButton text={currentWord.word} title="Sao chép từ vựng" size="md" />
                 <AudioButton word={currentWord.word} audioUrl={currentWord.audio_url} size="md" />
@@ -420,23 +449,23 @@ export function LearnTab({
             </div>
 
             {/* Core Section: Từ vựng, Cách đọc, Nghĩa */}
-            <div className="my-auto py-6 sm:py-8 text-center space-y-3 select-text">
-              <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
+            <div className="my-auto py-5 sm:py-8 text-center space-y-2.5 sm:space-y-3 select-text">
+              <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight break-words max-w-full">
                 {currentWord.word}
               </h2>
 
               {currentWord.ipa && (
-                <p className="text-base sm:text-lg font-semibold text-[#FF202F] font-mono tracking-wider">
+                <p className="text-sm sm:text-lg font-semibold text-[#FF202F] font-mono tracking-wider">
                   {currentWord.ipa.startsWith('/') ? currentWord.ipa : `/${currentWord.ipa}/`}
                 </p>
               )}
 
               <div className="pt-2 space-y-2">
-                <div className="inline-block px-6 py-3 rounded-2xl bg-[#181818] border border-neutral-800 text-lg sm:text-xl font-bold text-white shadow-inner">
+                <div className="inline-block max-w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl bg-[#181818] border border-neutral-800 text-base sm:text-xl font-bold text-white shadow-inner break-words">
                   {currentWord.meaning_vi}
                 </div>
                 {currentWord.meaning_en && (
-                  <p className="text-xs sm:text-sm text-neutral-400 italic mt-2.5 max-w-lg mx-auto leading-relaxed">
+                  <p className="text-xs sm:text-sm text-neutral-400 italic mt-2 max-w-lg mx-auto leading-relaxed">
                     &ldquo;{currentWord.meaning_en}&rdquo;
                   </p>
                 )}
@@ -444,7 +473,7 @@ export function LearnTab({
             </div>
 
             {/* Bottom Examples Section: Hiển thị luôn 2 ví dụ của từ không cần nhấn space */}
-            <div className="pt-5 border-t border-neutral-850/80 space-y-2.5 text-left text-xs select-text">
+            <div className="pt-4 sm:pt-5 border-t border-neutral-850/80 space-y-2.5 text-left text-xs select-text">
               <div className="flex items-center justify-between text-[11px] font-bold text-neutral-400 uppercase tracking-wider px-1">
                 <span>Ví dụ ngữ cảnh (2 câu)</span>
                 <span className="text-[10px] text-neutral-500 font-mono flex items-center gap-1.5 normal-case">
@@ -454,17 +483,17 @@ export function LearnTab({
               </div>
 
               {currentWord.example_1 && (
-                <div className="bg-[#181818]/80 p-3.5 rounded-2xl border border-neutral-800 transition-colors space-y-1 group/ex">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2 flex-1">
+                <div className="bg-[#181818]/80 p-3 sm:p-3.5 rounded-2xl border border-neutral-800 transition-colors space-y-1 group/ex">
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
                       <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-neutral-800 text-[#FF202F] shrink-0 mt-0.5">
                         1
                       </span>
-                      <p className="text-neutral-100 font-medium text-sm leading-relaxed">
+                      <p className="text-neutral-100 font-medium text-xs sm:text-sm leading-relaxed break-words">
                         {currentWord.example_1}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       <CopyButton
                         text={currentWord.example_1}
                         size="sm"
@@ -479,7 +508,7 @@ export function LearnTab({
                     </div>
                   </div>
                   {currentWord.example_1_vi && (
-                    <p className="text-neutral-400 text-xs pl-6 font-normal leading-relaxed">
+                    <p className="text-neutral-400 text-[11px] sm:text-xs pl-5 sm:pl-6 font-normal leading-relaxed break-words">
                       → {currentWord.example_1_vi}
                     </p>
                   )}
@@ -487,17 +516,17 @@ export function LearnTab({
               )}
 
               {currentWord.example_2 && (
-                <div className="bg-[#181818]/80 p-3.5 rounded-2xl border border-neutral-800 transition-colors space-y-1 group/ex">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2 flex-1">
+                <div className="bg-[#181818]/80 p-3 sm:p-3.5 rounded-2xl border border-neutral-800 transition-colors space-y-1 group/ex">
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
                       <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-neutral-800 text-[#FF202F] shrink-0 mt-0.5">
                         2
                       </span>
-                      <p className="text-neutral-100 font-medium text-sm leading-relaxed">
+                      <p className="text-neutral-100 font-medium text-xs sm:text-sm leading-relaxed break-words">
                         {currentWord.example_2}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       <CopyButton
                         text={currentWord.example_2}
                         size="sm"
@@ -512,7 +541,7 @@ export function LearnTab({
                     </div>
                   </div>
                   {currentWord.example_2_vi && (
-                    <p className="text-neutral-400 text-xs pl-6 font-normal leading-relaxed">
+                    <p className="text-neutral-400 text-[11px] sm:text-xs pl-5 sm:pl-6 font-normal leading-relaxed break-words">
                       → {currentWord.example_2_vi}
                     </p>
                   )}
@@ -521,13 +550,13 @@ export function LearnTab({
             </div>
           </div>
 
-          {/* Action Buttons Row */}
-          <div className="grid grid-cols-4 gap-3 pt-2">
+          {/* Action Buttons Row - Thumb-friendly tap targets */}
+          <div className="grid grid-cols-4 gap-2 sm:gap-3 pt-2">
             <button
               type="button"
               onClick={handlePrev}
               disabled={currentIndex === 0}
-              className="flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#121212] hover:bg-[#181818] border border-neutral-800 text-xs font-bold text-neutral-300 disabled:opacity-40 transition-all active:scale-95"
+              className="flex items-center justify-center gap-1 sm:gap-1.5 py-3 sm:py-3.5 rounded-2xl bg-[#121212] hover:bg-[#181818] border border-neutral-800 text-xs font-bold text-neutral-300 disabled:opacity-40 transition-all active:scale-95 min-h-[46px]"
             >
               <ChevronLeft size={16} />
               <span className="hidden sm:inline">Trước</span>
@@ -536,7 +565,7 @@ export function LearnTab({
             <button
               type="button"
               onClick={handleMarkReview}
-              className="flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#1a1410] hover:bg-[#261d15] border border-amber-500/40 text-amber-400 text-xs font-bold transition-all active:scale-95 shadow-sm"
+              className="flex items-center justify-center gap-1 sm:gap-1.5 py-3 sm:py-3.5 rounded-2xl bg-[#1a1410] hover:bg-[#261d15] border border-amber-500/40 text-amber-400 text-xs font-bold transition-all active:scale-95 shadow-sm min-h-[46px]"
               title="Đánh dấu cần ôn lại"
             >
               <RotateCcw size={15} />
@@ -546,7 +575,7 @@ export function LearnTab({
             <button
               type="button"
               onClick={handleMarkMastered}
-              className="flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#101b14] hover:bg-[#14261b] border border-emerald-500/40 text-emerald-400 text-xs font-bold transition-all active:scale-95 shadow-sm"
+              className="flex items-center justify-center gap-1 sm:gap-1.5 py-3 sm:py-3.5 rounded-2xl bg-[#101b14] hover:bg-[#14261b] border border-emerald-500/40 text-emerald-400 text-xs font-bold transition-all active:scale-95 shadow-sm min-h-[46px]"
               title="Đánh dấu đã thuộc"
             >
               <Check size={16} />
@@ -557,20 +586,25 @@ export function LearnTab({
               type="button"
               onClick={handleNext}
               disabled={currentIndex === items.length - 1}
-              className="flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-gradient-to-r from-[#D91827] to-[#FF202F] text-white text-xs font-bold disabled:opacity-40 transition-all active:scale-95 shadow-lg shadow-[#FF202F]/20"
+              className="flex items-center justify-center gap-1 sm:gap-1.5 py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-[#D91827] to-[#FF202F] text-white text-xs font-bold disabled:opacity-40 transition-all active:scale-95 shadow-lg shadow-[#FF202F]/20 min-h-[46px]"
             >
               <span className="hidden sm:inline">Tiếp theo</span>
               <ChevronRight size={16} />
             </button>
           </div>
 
-          {/* Keyboard hints */}
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-[11px] text-neutral-400 pt-1">
-            <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">←</kbd> Từ trước</span>
-            <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-amber-400 font-mono font-bold">1</kbd> Ôn lại</span>
-            <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-emerald-400 font-mono font-bold">2</kbd> hoặc <kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-emerald-400 font-mono font-bold">Enter</kbd> Đã thuộc</span>
-            <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">→</kbd> Tiếp theo</span>
-            <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">Space</kbd> Phát âm</span>
+          {/* Swipe indicator on mobile & keyboard hints on desktop */}
+          <div className="flex flex-col items-center gap-1.5 pt-1">
+            <span className="md:hidden text-[11px] text-neutral-500 font-medium">
+              👈 Vuốt ngang thẻ từ để chuyển câu tiếp theo 👉
+            </span>
+            <div className="hidden md:flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-[11px] text-neutral-400">
+              <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">←</kbd> Từ trước</span>
+              <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-amber-400 font-mono font-bold">1</kbd> Ôn lại</span>
+              <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-emerald-400 font-mono font-bold">2</kbd> hoặc <kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-emerald-400 font-mono font-bold">Enter</kbd> Đã thuộc</span>
+              <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">→</kbd> Tiếp theo</span>
+              <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">Space</kbd> Phát âm</span>
+            </div>
           </div>
         </div>
       )}
@@ -609,8 +643,110 @@ export function LearnTab({
             </div>
           </div>
 
-          {/* Vocabulary Table */}
-          <div className="rounded-2xl bg-[#121212] border border-neutral-800 overflow-hidden shadow-xl">
+          {/* Mobile Card List (Visible on < 768px) */}
+          <div className="md:hidden space-y-3">
+            {filteredList.map((vocab) => (
+              <div
+                key={vocab.id}
+                className="p-4 rounded-2xl bg-[#121212] border border-neutral-800 shadow-md space-y-3"
+              >
+                {/* Card Header: Level, Word, IPA, Audio & Copy */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="px-2 py-0.5 rounded-lg bg-[#FF202F]/15 border border-[#FF202F]/40 text-[#FF202F] text-[10px] font-black uppercase font-mono">
+                        {vocab.level || 'CEFR'}
+                      </span>
+                      {vocab.part_of_speech && (
+                        <span className="text-[10px] text-neutral-400 uppercase font-semibold">
+                          {vocab.part_of_speech}
+                        </span>
+                      )}
+                      <StatusBadge status={vocab.status || 'new'} size="sm" />
+                    </div>
+                    <h3 className="text-base font-bold text-white select-text">
+                      {vocab.word}
+                    </h3>
+                    {vocab.ipa && (
+                      <p className="text-xs text-[#FF202F] font-mono">{vocab.ipa}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <CopyButton text={vocab.word} size="sm" title="Sao chép từ vựng" />
+                    <AudioButton word={vocab.word} audioUrl={vocab.audio_url} size="sm" />
+                  </div>
+                </div>
+
+                {/* Meaning */}
+                <div className="text-sm font-semibold text-neutral-200 bg-[#181818] p-2.5 rounded-xl border border-neutral-800/80">
+                  {vocab.meaning_vi}
+                </div>
+
+                {/* Card Action Buttons */}
+                <div className="flex items-center justify-between pt-1 border-t border-neutral-850 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    {vocab.visual_concept && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConceptModalData({
+                            word: vocab.word,
+                            visual_concept: vocab.visual_concept || '',
+                            score: vocab.image_validation_score || 0,
+                            reason: vocab.image_validation_reason || '',
+                          })
+                        }
+                        className="p-2 rounded-xl bg-neutral-850 hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                        title="Xem Visual Concept"
+                      >
+                        <Eye size={14} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={isGeneratingImage}
+                      onClick={() => handleGenerateContextImage(vocab.id)}
+                      className="p-2 rounded-xl bg-neutral-850 hover:bg-[#FF202F]/20 text-neutral-400 hover:text-[#FF202F] transition-colors disabled:opacity-40"
+                      title="Tạo ảnh AI"
+                    >
+                      <Sparkles size={14} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onProgressUpdate(vocab.id, 'review')}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
+                        vocab.status === 'review'
+                          ? 'bg-amber-500/20 border-amber-500 text-amber-400'
+                          : 'bg-neutral-850 hover:bg-amber-500/10 border-neutral-750 text-neutral-400 hover:text-amber-400'
+                      }`}
+                    >
+                      <RotateCcw size={12} />
+                      <span>Ôn lại</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onProgressUpdate(vocab.id, 'mastered')}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
+                        vocab.status === 'mastered'
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                          : 'bg-neutral-850 hover:bg-emerald-500/10 border-neutral-750 text-neutral-400 hover:text-emerald-400'
+                      }`}
+                    >
+                      <Check size={13} />
+                      <span>Đã thuộc</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop & Tablet Vocabulary Table (Visible on >= 768px) */}
+          <div className="hidden md:block rounded-2xl bg-[#121212] border border-neutral-800 overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#181818] border-b border-neutral-800 text-neutral-400 font-bold uppercase tracking-wider text-[10px]">
@@ -639,73 +775,73 @@ export function LearnTab({
                             <CopyButton text={vocab.word} size="sm" title="Sao chép từ vựng" />
                           </div>
                         </td>
-                      <td className="py-3.5 px-3">
-                        <div className="flex flex-col">
-                          <span className="text-neutral-400 font-mono">{vocab.ipa || '-'}</span>
-                          <span className="text-[10px] text-neutral-400 uppercase font-semibold">
-                            {vocab.part_of_speech || ''}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-neutral-300 font-medium">
-                        {vocab.meaning_vi}
-                      </td>
-                      <td className="py-3.5 px-3">
-                        <StatusBadge status={vocab.status || 'new'} size="sm" />
-                      </td>
-                      <td className="py-3.5 px-3 text-center">
-                        <AudioButton word={vocab.word} audioUrl={vocab.audio_url} size="sm" />
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {vocab.visual_concept && (
+                        <td className="py-3.5 px-3">
+                          <div className="flex flex-col">
+                            <span className="text-neutral-400 font-mono">{vocab.ipa || '-'}</span>
+                            <span className="text-[10px] text-neutral-400 uppercase font-semibold">
+                              {vocab.part_of_speech || ''}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-neutral-300 font-medium">
+                          {vocab.meaning_vi}
+                        </td>
+                        <td className="py-3.5 px-3">
+                          <StatusBadge status={vocab.status || 'new'} size="sm" />
+                        </td>
+                        <td className="py-3.5 px-3 text-center">
+                          <AudioButton word={vocab.word} audioUrl={vocab.audio_url} size="sm" />
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {vocab.visual_concept && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setConceptModalData({
+                                    word: vocab.word,
+                                    visual_concept: vocab.visual_concept || '',
+                                    score: vocab.image_validation_score || 0,
+                                    reason: vocab.image_validation_reason || '',
+                                  })
+                                }
+                                className="p-1.5 rounded-lg bg-neutral-850 hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                                title="Xem Visual Concept & Thẩm định"
+                              >
+                                <Eye size={13} />
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() =>
-                                setConceptModalData({
-                                  word: vocab.word,
-                                  visual_concept: vocab.visual_concept || '',
-                                  score: vocab.image_validation_score || 0,
-                                  reason: vocab.image_validation_reason || '',
-                                })
-                              }
-                              className="p-1.5 rounded-lg bg-neutral-850 hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
-                              title="Xem Visual Concept & Thẩm định"
+                              disabled={isGeneratingImage}
+                              onClick={() => handleGenerateContextImage(vocab.id)}
+                              className="p-1.5 rounded-lg bg-neutral-850 hover:bg-[#FF202F]/20 text-neutral-400 hover:text-[#FF202F] transition-colors disabled:opacity-40"
+                              title="Tạo ảnh minh họa chuẩn nghĩa AI"
                             >
-                              <Eye size={13} />
+                              <Sparkles size={13} />
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            disabled={isGeneratingImage}
-                            onClick={() => handleGenerateContextImage(vocab.id)}
-                            className="p-1.5 rounded-lg bg-neutral-850 hover:bg-[#FF202F]/20 text-neutral-400 hover:text-[#FF202F] transition-colors disabled:opacity-40"
-                            title="Tạo ảnh minh họa chuẩn nghĩa AI"
-                          >
-                            <Sparkles size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onProgressUpdate(vocab.id, 'review')}
-                            className="p-1.5 rounded-lg bg-neutral-850 hover:bg-amber-500/20 text-neutral-400 hover:text-amber-400 transition-colors"
-                            title="Đánh dấu cần ôn lại"
-                          >
-                            <RotateCcw size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onProgressUpdate(vocab.id, 'mastered')}
-                            className="p-1.5 rounded-lg bg-neutral-850 hover:bg-emerald-500/20 text-neutral-400 hover:text-emerald-400 transition-colors"
-                            title="Đánh dấu đã thuộc"
-                          >
-                            <Check size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
+                            <button
+                              type="button"
+                              onClick={() => onProgressUpdate(vocab.id, 'review')}
+                              className="p-1.5 rounded-lg bg-neutral-850 hover:bg-amber-500/20 text-neutral-400 hover:text-amber-400 transition-colors"
+                              title="Đánh dấu cần ôn lại"
+                            >
+                              <RotateCcw size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onProgressUpdate(vocab.id, 'mastered')}
+                              className="p-1.5 rounded-lg bg-neutral-850 hover:bg-emerald-500/20 text-neutral-400 hover:text-emerald-400 transition-colors"
+                              title="Đánh dấu đã thuộc"
+                            >
+                              <Check size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
               </table>
             </div>
 
