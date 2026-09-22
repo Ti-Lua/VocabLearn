@@ -390,23 +390,41 @@ function initSchema(db: DatabaseSync) {
     );
   }
 
-  // Seed demo user
-  const demoUser = db.prepare('SELECT * FROM users WHERE email = ?').get('demo@learnvocab.local') as unknown;
-  if (!demoUser) {
-    const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync('password123', salt);
-    db.prepare(`
-      INSERT INTO users (id, email, username, password_hash, full_name, avatar_url)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      'demo-user-id',
-      'demo@learnvocab.local',
-      'tilua',
-      hash,
-      'Tí Lửa',
-      'https://api.dicebear.com/7.x/bottts/svg?seed=tilua'
-    );
-  }
+  // Seed demo / personal users (Tí Lửa & Tí Điệu)
+  const salt = bcrypt.genSaltSync(10);
+  const hash = bcrypt.hashSync('password123', salt);
+  const insertUserStmt = db.prepare(`
+    INSERT OR IGNORE INTO users (id, email, username, password_hash, full_name, avatar_url)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  insertUserStmt.run(
+    '85c97771-538f-4532-a970-c9c9d82babe2',
+    'demo@learnvocab.local',
+    'tilua',
+    hash,
+    'Tí Lửa',
+    'https://api.dicebear.com/7.x/bottts/svg?seed=tilua'
+  );
+
+  insertUserStmt.run(
+    '5cd254c4-618e-4cb1-a09a-cb161a28a22a',
+    'tidieu@learnvocab.local',
+    'tidieu',
+    hash,
+    'Tí Điệu',
+    'https://api.dicebear.com/7.x/bottts/svg?seed=tidieu'
+  );
+
+  // Backward compatibility for demo-user-id
+  insertUserStmt.run(
+    'demo-user-id',
+    'demoid@learnvocab.local',
+    'tilua_demo',
+    hash,
+    'Tí Lửa',
+    'https://api.dicebear.com/7.x/bottts/svg?seed=tilua'
+  );
 
   // Auto-import vocabulary if table is empty
   const vocabCount = db.prepare('SELECT COUNT(*) as count FROM vocabulary').get() as { count: number };

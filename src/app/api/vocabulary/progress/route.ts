@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { updatePersonalWordProgress } from '@/lib/personalLearningService';
+import { getActiveUserIdFromRequest } from '@/lib/serverUser';
 import { WordStatus } from '@/types';
 
 export async function POST(req: Request) {
@@ -11,10 +12,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Thiếu vocabularyId hoặc status' }, { status: 400 });
     }
 
+    const userId = body.userId || (await getActiveUserIdFromRequest(req));
+
     const result = await updatePersonalWordProgress(
       Number(vocabularyId),
       status as WordStatus,
-      isCorrect
+      isCorrect,
+      userId
     );
 
     return NextResponse.json({ success: true, result });

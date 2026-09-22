@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getBooksWithPersonalProgress } from '@/lib/personalLearningService';
 import { getLanguageConfig } from '@/config/languages';
+import { getActiveUserIdFromRequest } from '@/lib/serverUser';
 
 export async function GET(req: Request) {
   try {
@@ -15,7 +16,8 @@ export async function GET(req: Request) {
       languageId = getLanguageConfig(langCode).id;
     }
 
-    const books = await getBooksWithPersonalProgress(languageId);
+    const userId = await getActiveUserIdFromRequest(req);
+    const books = await getBooksWithPersonalProgress(languageId, userId);
     return NextResponse.json({ books });
   } catch (error: any) {
     console.error('Fetch books error:', error);

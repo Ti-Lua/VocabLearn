@@ -2,6 +2,7 @@
 
 import useSWR, { mutate } from 'swr';
 import { Book, UserStats, ChineseDashboardStats } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -13,16 +14,19 @@ const fetcher = async (url: string) => {
 };
 
 /**
- * Hook tải danh mục sách và tiến độ
+ * Hook tải danh mục sách và tiến độ theo User
  */
-export function useBooks(_userId?: string, langCode = 'en') {
-  const url = `/api/books?lang=${langCode}`;
+export function useBooks(overrideUserId?: string, langCode = 'en') {
+  const { user } = useAuth();
+  const userId = overrideUserId || user?.id;
+  const url = `/api/books?lang=${langCode}${userId ? `&userId=${userId}` : ''}`;
+
   const { data, error, isLoading, mutate: refreshBooks } = useSWR<{ books: Book[] }>(
     url,
     fetcher,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 15000,
+      dedupingInterval: 10000,
     }
   );
 
@@ -37,8 +41,11 @@ export function useBooks(_userId?: string, langCode = 'en') {
 /**
  * Hook tải thống kê học tập tổng hợp của User (bảng user_stats)
  */
-export function useUserStats() {
-  const url = '/api/user/stats';
+export function useUserStats(overrideUserId?: string) {
+  const { user } = useAuth();
+  const userId = overrideUserId || user?.id;
+  const url = `/api/user/stats${userId ? `?userId=${userId}` : ''}`;
+
   const { data, error, isLoading, mutate: refreshStats } = useSWR<{ stats: UserStats }>(
     url,
     fetcher,
@@ -59,8 +66,11 @@ export function useUserStats() {
 /**
  * Hook tải vị trí bài học dang dở gần nhất để Tiếp tục học
  */
-export function useContinueLearning() {
-  const url = '/api/user/continue';
+export function useContinueLearning(overrideUserId?: string) {
+  const { user } = useAuth();
+  const userId = overrideUserId || user?.id;
+  const url = `/api/user/continue${userId ? `?userId=${userId}` : ''}`;
+
   const { data, error, isLoading, mutate: refreshContinue } = useSWR<{
     continueData: {
       bookId: number;
@@ -93,13 +103,16 @@ export function useContinueLearning() {
 /**
  * Hook tải thống kê tiếng Trung HSK
  */
-export function useChineseStats() {
-  const url = '/api/chinese/stats';
+export function useChineseStats(overrideUserId?: string) {
+  const { user } = useAuth();
+  const userId = overrideUserId || user?.id;
+  const url = `/api/chinese/stats${userId ? `?userId=${userId}` : ''}`;
+
   const { data, error, isLoading, mutate: refreshChineseStats } = useSWR<{
     stats: ChineseDashboardStats;
   }>(url, fetcher, {
     revalidateOnFocus: false,
-    dedupingInterval: 20000,
+    dedupingInterval: 15000,
   });
 
   return {
@@ -114,5 +127,12 @@ export function useChineseStats() {
  * Làm mới toàn bộ cache học tập sau khi hoàn thành bài học
  */
 export function invalidateLearningData() {
-  mutate((key) => typeof key === 'string' && (key.startsWith('/api/user') || key.startsWith('/api/books') || key.startsWith('/api/review')));
+  mutate(
+    (key) =>
+      typeof key === 'string' &&
+      (key.startsWith('/api/user') ||
+        key.startsWith('/api/books') ||
+        key.startsWith('/api/review') ||
+        key.startsWith('/api/chinese'))
+  );
 }

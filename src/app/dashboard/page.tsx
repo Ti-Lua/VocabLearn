@@ -40,8 +40,8 @@ export default function DashboardPage() {
   const [localCounts, setLocalCounts] = useState({ mastered: 0, total: 0 });
 
   useEffect(() => {
-    setLocalCounts(getLocalProgressCounts('personal'));
-  }, []);
+    setLocalCounts(getLocalProgressCounts(user?.id || 'personal'));
+  }, [user?.id]);
 
   const displayMastered = Math.max(userStats?.total_words_mastered || 0, localCounts.mastered);
   const displayLearned = Math.max(userStats?.total_words_learned || 0, localCounts.total);
@@ -49,8 +49,8 @@ export default function DashboardPage() {
   // Fetch review words count in background
   useEffect(() => {
     const reviewUrl = isChinese
-      ? '/api/chinese/review'
-      : '/api/review?status=review';
+      ? `/api/chinese/review?userId=${user?.id || ''}`
+      : `/api/review?status=review&userId=${user?.id || ''}`;
 
     fetch(reviewUrl)
       .then((r) => r.json())
@@ -58,7 +58,7 @@ export default function DashboardPage() {
         if (res.words) setReviewCount(res.words.length);
       })
       .catch(() => {});
-  }, [isChinese]);
+  }, [isChinese, user?.id]);
 
   const loading = isChinese ? zhLoading && !chineseStats : booksLoading && books.length === 0;
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPersonalReviewWords, getPersonalMasteredWords } from '@/lib/personalLearningService';
+import { getActiveUserIdFromRequest } from '@/lib/serverUser';
 
 export async function GET(req: Request) {
   try {
@@ -10,12 +11,13 @@ export async function GET(req: Request) {
 
     const bookId = bookIdParam ? parseInt(bookIdParam, 10) : undefined;
     const topicId = topicIdParam ? parseInt(topicIdParam, 10) : undefined;
+    const userId = await getActiveUserIdFromRequest(req);
 
     let words = [];
     if (status === 'mastered' || status === 'known') {
-      words = await getPersonalMasteredWords(bookId, topicId);
+      words = await getPersonalMasteredWords(bookId, topicId, userId);
     } else {
-      words = await getPersonalReviewWords(bookId, topicId);
+      words = await getPersonalReviewWords(bookId, topicId, userId);
     }
 
     return NextResponse.json({ words });

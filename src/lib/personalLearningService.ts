@@ -13,17 +13,17 @@ import {
 
 /**
  * Personal Learning Data Access Layer
- * Supabase Cloud là Source of Truth vĩnh viễn cho mọi tiến độ học tập của Personal Profile.
+ * Supabase Cloud là Source of Truth vĩnh viễn cho mọi tiến độ học tập của Dual Profiles (Tí Lửa & Tí Điệu).
  * Kết hợp SQLite cục bộ làm bộ đệm tốc độ cao cho metadata sách và từ vựng tĩnh.
  */
 
-function getLocalUserStats(): UserStats {
+function getLocalUserStats(userId: string = PERSONAL_PROFILE_ID): UserStats {
   try {
     const db = getDb();
-    const stats = db.prepare('SELECT * FROM user_stats WHERE user_id = ?').get(PERSONAL_PROFILE_ID) as any;
+    const stats = db.prepare('SELECT * FROM user_stats WHERE user_id = ?').get(userId) as any;
     if (stats) {
       return {
-        user_id: PERSONAL_PROFILE_ID,
+        user_id: userId,
         total_words_learned: stats.total_words_learned || 0,
         total_words_mastered: stats.total_words_mastered || 0,
         total_topics_completed: stats.total_topics_completed || 0,
@@ -36,11 +36,11 @@ function getLocalUserStats(): UserStats {
         last_vocab_id: stats.last_vocab_id || null,
       };
     }
-    const mastered = (db.prepare("SELECT COUNT(*) as c FROM user_vocabulary_progress WHERE user_id = ? AND status = 'mastered'").get(PERSONAL_PROFILE_ID) as any)?.c || 0;
-    const learning = (db.prepare("SELECT COUNT(*) as c FROM user_vocabulary_progress WHERE user_id = ? AND status = 'learning'").get(PERSONAL_PROFILE_ID) as any)?.c || 0;
-    const review = (db.prepare("SELECT COUNT(*) as c FROM user_vocabulary_progress WHERE user_id = ? AND status = 'review'").get(PERSONAL_PROFILE_ID) as any)?.c || 0;
+    const mastered = (db.prepare("SELECT COUNT(*) as c FROM user_vocabulary_progress WHERE user_id = ? AND status = 'mastered'").get(userId) as any)?.c || 0;
+    const learning = (db.prepare("SELECT COUNT(*) as c FROM user_vocabulary_progress WHERE user_id = ? AND status = 'learning'").get(userId) as any)?.c || 0;
+    const review = (db.prepare("SELECT COUNT(*) as c FROM user_vocabulary_progress WHERE user_id = ? AND status = 'review'").get(userId) as any)?.c || 0;
     return {
-      user_id: PERSONAL_PROFILE_ID,
+      user_id: userId,
       total_words_learned: mastered + learning + review,
       total_words_mastered: mastered,
       total_topics_completed: 0,
@@ -55,7 +55,7 @@ function getLocalUserStats(): UserStats {
   } catch (e) {
     console.error('Error getLocalUserStats:', e);
     return {
-      user_id: PERSONAL_PROFILE_ID,
+      user_id: userId,
       total_words_learned: 0,
       total_words_mastered: 0,
       total_topics_completed: 0,
@@ -70,7 +70,7 @@ function getLocalUserStats(): UserStats {
   }
 }
 
-function getLocalContinueLearning() {
+function getLocalContinueLearning(userId: string = PERSONAL_PROFILE_ID) {
   try {
     const db = getDb();
     const row = db.prepare(`
@@ -81,7 +81,7 @@ function getLocalContinueLearning() {
       WHERE utp.user_id = ? AND utp.status != 'completed'
       ORDER BY utp.last_studied_at DESC
       LIMIT 1
-    `).get(PERSONAL_PROFILE_ID) as any;
+    `).get(userId) as any;
 
     if (row) {
       return {
@@ -132,7 +132,7 @@ function getLocalContinueLearning() {
   return null;
 }
 
-function getLocalReviewWords(bookId?: number, topicId?: number): Vocabulary[] {
+function getLocalReviewWords(bookId?: number, topicId?: number, userId: string = PERSONAL_PROFILE_ID): Vocabulary[] {
   try {
     const db = getDb();
     let query = `
@@ -141,7 +141,7 @@ function getLocalReviewWords(bookId?: number, topicId?: number): Vocabulary[] {
       JOIN vocabulary v ON uvp.vocabulary_id = v.id
       WHERE uvp.user_id = ? AND uvp.status = 'review'
     `;
-    const params: any[] = [PERSONAL_PROFILE_ID];
+    const params: any[] = [userId];
     if (bookId) {
       query += ' AND v.book_id = ?';
       params.push(bookId);
@@ -158,7 +158,7 @@ function getLocalReviewWords(bookId?: number, topicId?: number): Vocabulary[] {
   }
 }
 
-function getLocalMasteredWords(bookId?: number, topicId?: number): Vocabulary[] {
+function getLocalMasteredWords(bookId?: number, topicId?: number, userId: string = PERSONAL_PROFILE_ID): Vocabulary[] {
   try {
     const db = getDb();
     let query = `
@@ -167,7 +167,7 @@ function getLocalMasteredWords(bookId?: number, topicId?: number): Vocabulary[] 
       JOIN vocabulary v ON uvp.vocabulary_id = v.id
       WHERE uvp.user_id = ? AND uvp.status = 'mastered'
     `;
-    const params: any[] = [PERSONAL_PROFILE_ID];
+    const params: any[] = [userId];
     if (bookId) {
       query += ' AND v.book_id = ?';
       params.push(bookId);
@@ -187,10 +187,11 @@ function getLocalMasteredWords(bookId?: number, topicId?: number): Vocabulary[] 
 /**
  * 1. Lấy thống kê học tập tổng hợp từ Supabase (fallback SQLite)
  */
-export async function getPersonalUserStats(): Promise<UserStats> {
+export async function getPersonalUserStats(targetUserId?: string): Promise<UserStats> {
+  const uid = targetUserId || PERSONAL_PROFILE_ID;
   const supabase = getSupabaseAdmin();
   if (!supabase) {
-    return getLocalUserStats();
+    return getLocalUserStats(uid);
   }
 
   try {
@@ -198,7 +199,7 @@ export async function getPersonalUserStats(): Promise<UserStats> {
     const { data: progressList } = await supabase
       .from('user_vocabulary_progress')
       .select('status')
-      .eq('user_id', PERSONAL_PROFILE_ID);
+      .eq('user_id', uid);
 
     const mastered = progressList?.filter((p) => p.status === 'mastered').length || 0;
     const review = progressList?.filter((p) => p.status === 'review').length || 0;
@@ -209,18 +210,18 @@ export async function getPersonalUserStats(): Promise<UserStats> {
     const { count: completedTopics } = await supabase
       .from('user_topic_progress')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .eq('is_completed', true);
 
     // 3. Lấy thông tin session gần nhất từ user_stats
     const { data: statsRow } = await supabase
       .from('user_stats')
       .select('*')
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .maybeSingle();
 
     return {
-      user_id: PERSONAL_PROFILE_ID,
+      user_id: uid,
       total_words_learned: totalLearned,
       total_words_mastered: mastered,
       total_topics_completed: completedTopics || 0,
@@ -234,16 +235,17 @@ export async function getPersonalUserStats(): Promise<UserStats> {
     };
   } catch (error) {
     console.error('Error fetching personal user stats:', error);
-    return getLocalUserStats();
+    return getLocalUserStats(uid);
   }
 }
 
 /**
  * 2. Lấy vị trí học dang dở gần nhất (Continue Learning)
  */
-export async function getPersonalContinueLearning() {
+export async function getPersonalContinueLearning(targetUserId?: string) {
+  const uid = targetUserId || PERSONAL_PROFILE_ID;
   const supabase = getSupabaseAdmin();
-  if (!supabase) return getLocalContinueLearning();
+  if (!supabase) return getLocalContinueLearning(uid);
 
   try {
     // 1. Tìm topic đang học gần nhất từ user_topic_progress
@@ -270,7 +272,7 @@ export async function getPersonalContinueLearning() {
           )
         )
       `)
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .neq('status', 'completed')
       .order('last_studied_at', { ascending: false })
       .limit(1)
@@ -300,7 +302,7 @@ export async function getPersonalContinueLearning() {
     const { data: statsRow } = await supabase
       .from('user_stats')
       .select('last_book_id, last_topic_id, last_vocab_id')
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .maybeSingle();
 
     if (statsRow?.last_topic_id) {
@@ -357,10 +359,10 @@ export async function getPersonalContinueLearning() {
       };
     }
 
-    return getLocalContinueLearning();
+    return getLocalContinueLearning(uid);
   } catch (error) {
     console.error('Error fetching continue learning:', error);
-    return getLocalContinueLearning();
+    return getLocalContinueLearning(uid);
   }
 }
 
@@ -370,14 +372,16 @@ export async function getPersonalContinueLearning() {
 export async function updatePersonalWordProgress(
   vocabularyId: number,
   status: WordStatus | 'known',
-  isCorrect?: boolean
+  isCorrect?: boolean,
+  targetUserId?: string
 ) {
+  const uid = targetUserId || PERSONAL_PROFILE_ID;
   // Chuẩn hóa status theo database constraint: ('new', 'learning', 'mastered', 'review')
   const dbStatus: WordStatus = status === 'known' ? 'mastered' : status;
 
   // Luôn cập nhật vào SQLite cục bộ để bảo đảm dữ liệu offline/Serverless fallback
   try {
-    updateWordProgress(PERSONAL_PROFILE_ID, vocabularyId, dbStatus, isCorrect);
+    updateWordProgress(uid, vocabularyId, dbStatus, isCorrect);
   } catch (localErr) {
     console.warn('Lỗi ghi tiến trình SQLite cục bộ:', localErr);
   }
@@ -391,7 +395,7 @@ export async function updatePersonalWordProgress(
   const { data: existing } = await supabase
     .from('user_vocabulary_progress')
     .select('correct_count, wrong_count, review_count')
-    .eq('user_id', PERSONAL_PROFILE_ID)
+    .eq('user_id', uid)
     .eq('vocabulary_id', vocabularyId)
     .maybeSingle();
 
@@ -422,7 +426,7 @@ export async function updatePersonalWordProgress(
     .from('user_vocabulary_progress')
     .upsert(
       {
-        user_id: PERSONAL_PROFILE_ID,
+        user_id: uid,
         vocabulary_id: vocabularyId,
         status: dbStatus,
         correct_count: correctCount,
@@ -459,7 +463,7 @@ export async function updatePersonalWordProgress(
         .from('user_stats')
         .upsert(
           {
-            user_id: PERSONAL_PROFILE_ID,
+            user_id: uid,
             last_book_id: bookId,
             last_topic_id: topicId,
             last_vocab_id: vocabularyId,
@@ -485,7 +489,7 @@ export async function updatePersonalWordProgress(
       const { data: learnedList } = await supabase
         .from('user_vocabulary_progress')
         .select('vocabulary_id, status')
-        .eq('user_id', PERSONAL_PROFILE_ID)
+        .eq('user_id', uid)
         .in('vocabulary_id', topicVocabIds);
 
       const masteredCount = learnedList?.filter((p) => p.status === 'mastered').length || 0;
@@ -498,7 +502,7 @@ export async function updatePersonalWordProgress(
         .from('user_topic_progress')
         .upsert(
           {
-            user_id: PERSONAL_PROFILE_ID,
+            user_id: uid,
             topic_id: topicId,
             last_vocab_id: vocabularyId,
             status: isCompleted ? 'completed' : 'in_progress',
@@ -516,27 +520,27 @@ export async function updatePersonalWordProgress(
       const { count: completedTopicsCount } = await supabase
         .from('user_topic_progress')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', PERSONAL_PROFILE_ID)
+        .eq('user_id', uid)
         .eq('is_completed', true);
 
       // Cập nhật tổng từ đã thuộc trong user_stats
       const { count: totalMasteredCount } = await supabase
         .from('user_vocabulary_progress')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', PERSONAL_PROFILE_ID)
+        .eq('user_id', uid)
         .eq('status', 'mastered');
 
       // Cập nhật tổng từ đã học trong user_stats
       const { count: totalLearnedCount } = await supabase
         .from('user_vocabulary_progress')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', PERSONAL_PROFILE_ID);
+        .eq('user_id', uid);
 
       await supabase
         .from('user_stats')
         .upsert(
           {
-            user_id: PERSONAL_PROFILE_ID,
+            user_id: uid,
             total_words_learned: totalLearnedCount || 0,
             total_words_mastered: totalMasteredCount || 0,
             total_topics_completed: completedTopicsCount || 0,
@@ -556,9 +560,14 @@ export async function updatePersonalWordProgress(
 /**
  * 4. Lấy danh sách từ CẦN ÔN TẬP (status = 'review') từ Supabase (fallback SQLite)
  */
-export async function getPersonalReviewWords(bookId?: number, topicId?: number): Promise<Vocabulary[]> {
+export async function getPersonalReviewWords(
+  bookId?: number,
+  topicId?: number,
+  targetUserId?: string
+): Promise<Vocabulary[]> {
+  const uid = targetUserId || PERSONAL_PROFILE_ID;
   const supabase = getSupabaseAdmin();
-  if (!supabase) return getLocalReviewWords(bookId, topicId);
+  if (!supabase) return getLocalReviewWords(bookId, topicId, uid);
 
   try {
     const query = supabase
@@ -589,13 +598,13 @@ export async function getPersonalReviewWords(bookId?: number, topicId?: number):
           word_image
         )
       `)
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .eq('status', 'review')
       .order('updated_at', { ascending: false });
 
     const { data, error } = await query;
     if (error || !data || data.length === 0) {
-      return getLocalReviewWords(bookId, topicId);
+      return getLocalReviewWords(bookId, topicId, uid);
     }
 
     const results: Vocabulary[] = [];
@@ -615,19 +624,24 @@ export async function getPersonalReviewWords(bookId?: number, topicId?: number):
       }
     }
 
-    return results.length > 0 ? results : getLocalReviewWords(bookId, topicId);
+    return results.length > 0 ? results : getLocalReviewWords(bookId, topicId, uid);
   } catch (error) {
     console.error('Error fetching review words:', error);
-    return getLocalReviewWords(bookId, topicId);
+    return getLocalReviewWords(bookId, topicId, uid);
   }
 }
 
 /**
  * 5. Lấy danh sách từ ĐÃ THUỘC (status = 'mastered') từ Supabase (fallback SQLite)
  */
-export async function getPersonalMasteredWords(bookId?: number, topicId?: number): Promise<Vocabulary[]> {
+export async function getPersonalMasteredWords(
+  bookId?: number,
+  topicId?: number,
+  targetUserId?: string
+): Promise<Vocabulary[]> {
+  const uid = targetUserId || PERSONAL_PROFILE_ID;
   const supabase = getSupabaseAdmin();
-  if (!supabase) return getLocalMasteredWords(bookId, topicId);
+  if (!supabase) return getLocalMasteredWords(bookId, topicId, uid);
 
   try {
     const query = supabase
@@ -658,13 +672,13 @@ export async function getPersonalMasteredWords(bookId?: number, topicId?: number
           word_image
         )
       `)
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .eq('status', 'mastered')
       .order('updated_at', { ascending: false });
 
     const { data, error } = await query;
     if (error || !data || data.length === 0) {
-      return getLocalMasteredWords(bookId, topicId);
+      return getLocalMasteredWords(bookId, topicId, uid);
     }
 
     const results: Vocabulary[] = [];
@@ -684,19 +698,23 @@ export async function getPersonalMasteredWords(bookId?: number, topicId?: number
       }
     }
 
-    return results.length > 0 ? results : getLocalMasteredWords(bookId, topicId);
+    return results.length > 0 ? results : getLocalMasteredWords(bookId, topicId, uid);
   } catch (error) {
     console.error('Error fetching mastered words:', error);
-    return getLocalMasteredWords(bookId, topicId);
+    return getLocalMasteredWords(bookId, topicId, uid);
   }
 }
 
 /**
- * 6. Lấy từ vựng của 1 Topic kèm tiến độ Supabase Cloud của Personal Profile (fallback SQLite)
+ * 6. Lấy từ vựng của 1 Topic kèm tiến độ Supabase Cloud của User (fallback SQLite)
  */
-export async function getTopicVocabularyWithProgress(topicId: number): Promise<Vocabulary[]> {
+export async function getTopicVocabularyWithProgress(
+  topicId: number,
+  targetUserId?: string
+): Promise<Vocabulary[]> {
+  const uid = targetUserId || PERSONAL_PROFILE_ID;
   const supabase = getSupabaseAdmin();
-  if (!supabase) return getVocabularyForTopic(topicId, PERSONAL_PROFILE_ID, 1, 1000);
+  if (!supabase) return getVocabularyForTopic(topicId, uid, 1, 1000);
 
   try {
     // 1. Lấy danh sách từ của topic
@@ -707,7 +725,7 @@ export async function getTopicVocabularyWithProgress(topicId: number): Promise<V
       .order('id', { ascending: true });
 
     if (vErr || !vocabs || vocabs.length === 0) {
-      return getVocabularyForTopic(topicId, PERSONAL_PROFILE_ID, 1, 1000);
+      return getVocabularyForTopic(topicId, uid, 1, 1000);
     }
 
     const vocabIds = vocabs.map((v) => v.id);
@@ -716,7 +734,7 @@ export async function getTopicVocabularyWithProgress(topicId: number): Promise<V
     const { data: progressList } = await supabase
       .from('user_vocabulary_progress')
       .select('vocabulary_id, status, correct_count, wrong_count, last_reviewed_at, next_review_at')
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .in('vocabulary_id', vocabIds);
 
     const progMap = new Map<number, any>();
@@ -750,16 +768,20 @@ export async function getTopicVocabularyWithProgress(topicId: number): Promise<V
     });
   } catch (error) {
     console.error('Error fetching topic vocabulary with progress:', error);
-    return getVocabularyForTopic(topicId, PERSONAL_PROFILE_ID, 1, 1000);
+    return getVocabularyForTopic(topicId, uid, 1, 1000);
   }
 }
 
 /**
- * 7. Lấy danh mục sách kèm tiến độ Supabase của Personal Profile (fallback SQLite)
+ * 7. Lấy danh mục sách kèm tiến độ Supabase của User (fallback SQLite)
  */
-export async function getBooksWithPersonalProgress(languageId = 1): Promise<Book[]> {
+export async function getBooksWithPersonalProgress(
+  languageId = 1,
+  targetUserId?: string
+): Promise<Book[]> {
+  const uid = targetUserId || PERSONAL_PROFILE_ID;
   const supabase = getSupabaseAdmin();
-  if (!supabase) return getBooks(PERSONAL_PROFILE_ID, languageId);
+  if (!supabase) return getBooks(uid, languageId);
 
   try {
     const { data: books, error: bErr } = await supabase
@@ -769,7 +791,7 @@ export async function getBooksWithPersonalProgress(languageId = 1): Promise<Book
       .order('order_index', { ascending: true });
 
     if (bErr || !books || books.length === 0) {
-      return getBooks(PERSONAL_PROFILE_ID, languageId);
+      return getBooks(uid, languageId);
     }
 
     // Lấy thống kê tổng số topic và từ theo sách
@@ -789,7 +811,7 @@ export async function getBooksWithPersonalProgress(languageId = 1): Promise<Book
     const { data: userProgress } = await supabase
       .from('user_vocabulary_progress')
       .select('vocabulary_id, status')
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .eq('status', 'mastered');
 
     const masteredVocabIds = new Set(userProgress?.map((p) => p.vocabulary_id) || []);
@@ -804,7 +826,7 @@ export async function getBooksWithPersonalProgress(languageId = 1): Promise<Book
     const { data: completedTopics } = await supabase
       .from('user_topic_progress')
       .select('topic_id, is_completed')
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .eq('is_completed', true);
 
     const completedTopicIds = new Set(completedTopics?.map((ct) => ct.topic_id) || []);
@@ -833,16 +855,20 @@ export async function getBooksWithPersonalProgress(languageId = 1): Promise<Book
     });
   } catch (error) {
     console.error('Error fetching books with progress:', error);
-    return getBooks(PERSONAL_PROFILE_ID, languageId);
+    return getBooks(uid, languageId);
   }
 }
 
 /**
- * 8. Lấy danh mục Topics kèm tiến độ Supabase của Personal Profile (fallback SQLite)
+ * 8. Lấy danh mục Topics kèm tiến độ Supabase của User (fallback SQLite)
  */
-export async function getTopicsWithPersonalProgress(bookId: number): Promise<Topic[]> {
+export async function getTopicsWithPersonalProgress(
+  bookId: number,
+  targetUserId?: string
+): Promise<Topic[]> {
+  const uid = targetUserId || PERSONAL_PROFILE_ID;
   const supabase = getSupabaseAdmin();
-  if (!supabase) return getTopics(bookId, PERSONAL_PROFILE_ID);
+  if (!supabase) return getTopics(bookId, uid);
 
   try {
     const { data: topics, error: tErr } = await supabase
@@ -852,7 +878,7 @@ export async function getTopicsWithPersonalProgress(bookId: number): Promise<Top
       .order('order_index', { ascending: true });
 
     if (tErr || !topics || topics.length === 0) {
-      return getTopics(bookId, PERSONAL_PROFILE_ID);
+      return getTopics(bookId, uid);
     }
 
     const topicIds = topics.map((t) => t.id);
@@ -875,7 +901,7 @@ export async function getTopicsWithPersonalProgress(bookId: number): Promise<Top
     const { data: progressList } = await supabase
       .from('user_vocabulary_progress')
       .select('vocabulary_id, status')
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .in('vocabulary_id', allVocabIds);
 
     const topicStatusMap = new Map<number, { mastered: number; learning: number; review: number }>();
@@ -894,7 +920,7 @@ export async function getTopicsWithPersonalProgress(bookId: number): Promise<Top
     const { data: topicProgressData } = await supabase
       .from('user_topic_progress')
       .select('topic_id, is_completed, best_test_score, last_vocab_id, status')
-      .eq('user_id', PERSONAL_PROFILE_ID)
+      .eq('user_id', uid)
       .in('topic_id', topicIds);
 
     const tpMap = new Map<number, any>();
@@ -922,26 +948,28 @@ export async function getTopicsWithPersonalProgress(bookId: number): Promise<Top
     });
   } catch (error) {
     console.error('Error fetching topics with progress:', error);
-    return getTopics(bookId, PERSONAL_PROFILE_ID);
+    return getTopics(bookId, uid);
   }
 }
 
 /**
  * 9. Lấy chi tiết sách theo ID (fallback SQLite)
  */
-export async function getPersonalBookById(bookId: number): Promise<Book | null> {
-  const books = await getBooksWithPersonalProgress();
+export async function getPersonalBookById(bookId: number, targetUserId?: string): Promise<Book | null> {
+  const uid = targetUserId || PERSONAL_PROFILE_ID;
+  const books = await getBooksWithPersonalProgress(1, uid);
   const found = books.find((b) => b.id === bookId);
   if (found) return found;
-  return getBookById(bookId, PERSONAL_PROFILE_ID);
+  return getBookById(bookId, uid);
 }
 
 /**
  * 10. Lấy chi tiết topic theo ID (fallback SQLite)
  */
-export async function getPersonalTopicById(topicId: number): Promise<Topic | null> {
+export async function getPersonalTopicById(topicId: number, targetUserId?: string): Promise<Topic | null> {
+  const uid = targetUserId || PERSONAL_PROFILE_ID;
   const supabase = getSupabaseAdmin();
-  if (!supabase) return getTopicById(topicId, PERSONAL_PROFILE_ID);
+  if (!supabase) return getTopicById(topicId, uid);
 
   try {
     const { data: topic } = await supabase
@@ -950,13 +978,12 @@ export async function getPersonalTopicById(topicId: number): Promise<Topic | nul
       .eq('id', topicId)
       .maybeSingle();
 
-    if (!topic) return getTopicById(topicId, PERSONAL_PROFILE_ID);
+    if (!topic) return getTopicById(topicId, uid);
 
-    const topics = await getTopicsWithPersonalProgress(topic.book_id);
+    const topics = await getTopicsWithPersonalProgress(topic.book_id, uid);
     return topics.find((t) => t.id === topicId) || topic;
   } catch (e) {
     console.error('Error fetching topic by id:', e);
-    return getTopicById(topicId, PERSONAL_PROFILE_ID);
+    return getTopicById(topicId, uid);
   }
 }
-

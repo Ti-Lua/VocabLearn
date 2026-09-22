@@ -24,8 +24,10 @@ import {
 } from 'lucide-react';
 import { Vocabulary, Book } from '@/types';
 import { saveLocalWordProgress } from '@/lib/progressStorage';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ReviewPage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'review' | 'mastered'>('review');
   const [books, setBooks] = useState<Book[]>([]);
   const [selectedBookId, setSelectedBookId] = useState<number | 'all'>('all');
@@ -57,8 +59,8 @@ export default function ReviewPage() {
   // Tải dữ liệu từ vựng (cả 2 nhóm để hiển thị số lượng badge đầy đủ)
   const fetchWords = useCallback((bookId?: number | 'all') => {
     setLoading(true);
-    let reviewUrl = '/api/review?status=review';
-    let masteredUrl = '/api/review?status=mastered';
+    let reviewUrl = `/api/review?status=review&userId=${user?.id || ''}`;
+    let masteredUrl = `/api/review?status=mastered&userId=${user?.id || ''}`;
 
     if (bookId && bookId !== 'all') {
       reviewUrl += `&bookId=${bookId}`;
@@ -75,7 +77,7 @@ export default function ReviewPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchWords(selectedBookId);
@@ -105,7 +107,7 @@ export default function ReviewPage() {
     }
 
     const newStatus = correct ? 'mastered' : 'review';
-    saveLocalWordProgress('personal', currentWord.id, newStatus);
+    saveLocalWordProgress(user?.id || 'personal', currentWord.id, newStatus);
 
     try {
       await fetch('/api/vocabulary/progress', {
@@ -115,6 +117,7 @@ export default function ReviewPage() {
           vocabularyId: currentWord.id,
           status: newStatus,
           isCorrect: correct,
+          userId: user?.id,
         }),
       });
 
@@ -140,7 +143,7 @@ export default function ReviewPage() {
 
   // Đổi từ ĐÃ THUỘC -> CẦN ÔN LẠI (khi quên từ)
   const handleMoveToReview = async (vocab: Vocabulary) => {
-    saveLocalWordProgress('personal', vocab.id, 'review');
+    saveLocalWordProgress(user?.id || 'personal', vocab.id, 'review');
     try {
       await fetch('/api/vocabulary/progress', {
         method: 'POST',
@@ -148,6 +151,7 @@ export default function ReviewPage() {
         body: JSON.stringify({
           vocabularyId: vocab.id,
           status: 'review',
+          userId: user?.id,
         }),
       });
 
@@ -162,7 +166,7 @@ export default function ReviewPage() {
 
   // Đổi từ CẦN ÔN LẠI -> ĐÃ THUỘC
   const handleMarkAsMastered = async (vocab: Vocabulary) => {
-    saveLocalWordProgress('personal', vocab.id, 'mastered');
+    saveLocalWordProgress(user?.id || 'personal', vocab.id, 'mastered');
     try {
       await fetch('/api/vocabulary/progress', {
         method: 'POST',
@@ -171,6 +175,7 @@ export default function ReviewPage() {
           vocabularyId: vocab.id,
           status: 'mastered',
           isCorrect: true,
+          userId: user?.id,
         }),
       });
 

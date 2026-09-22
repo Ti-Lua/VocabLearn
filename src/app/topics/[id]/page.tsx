@@ -32,19 +32,19 @@ export default function TopicDetailPage() {
 
   const fetchTopicData = useCallback(() => {
     if (!topicId) return;
-    fetch(`/api/topics/${topicId}`)
+    fetch(`/api/topics/${topicId}?userId=${user?.id || ''}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.topic) setTopic(data.topic);
         if (data.book) setBook(data.book);
         if (data.vocabulary) {
-          const merged = mergeWithLocalProgress<Vocabulary>('personal', data.vocabulary);
+          const merged = mergeWithLocalProgress<Vocabulary>(user?.id || 'personal', data.vocabulary);
           setVocabulary(merged);
         }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [topicId]);
+  }, [topicId, user?.id]);
 
   useEffect(() => {
     fetchTopicData();
@@ -57,7 +57,7 @@ export default function TopicDetailPage() {
     );
 
     // 2. Persist to localStorage immediately
-    saveLocalWordProgress('personal', vocabId, status);
+    saveLocalWordProgress(user?.id || 'personal', vocabId, status);
 
     // 3. Persist to server API in background (Supabase Cloud)
     try {
@@ -67,11 +67,12 @@ export default function TopicDetailPage() {
         body: JSON.stringify({
           vocabularyId: vocabId,
           status,
+          userId: user?.id,
         }),
       });
 
       // 4. Update topic metadata (is_completed, etc.) without wiping out client vocabulary state
-      fetch(`/api/topics/${topicId}`)
+      fetch(`/api/topics/${topicId}?userId=${user?.id || ''}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.topic) setTopic(data.topic);
