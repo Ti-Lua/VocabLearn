@@ -15,14 +15,14 @@ const fetcher = async (url: string) => {
 /**
  * Hook tải danh mục sách và tiến độ
  */
-export function useBooks(userId?: string, langCode = 'en') {
-  const url = userId ? `/api/books?userId=${userId}&lang=${langCode}` : null;
+export function useBooks(_userId?: string, langCode = 'en') {
+  const url = `/api/books?lang=${langCode}`;
   const { data, error, isLoading, mutate: refreshBooks } = useSWR<{ books: Book[] }>(
     url,
     fetcher,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 30000, // 30s
+      dedupingInterval: 15000,
     }
   );
 
@@ -37,14 +37,14 @@ export function useBooks(userId?: string, langCode = 'en') {
 /**
  * Hook tải thống kê học tập tổng hợp của User (bảng user_stats)
  */
-export function useUserStats(userId?: string) {
-  const url = userId ? `/api/user/stats?userId=${userId}` : null;
+export function useUserStats() {
+  const url = '/api/user/stats';
   const { data, error, isLoading, mutate: refreshStats } = useSWR<{ stats: UserStats }>(
     url,
     fetcher,
     {
       revalidateOnFocus: true,
-      dedupingInterval: 10000, // 10s
+      dedupingInterval: 5000,
     }
   );
 
@@ -59,8 +59,8 @@ export function useUserStats(userId?: string) {
 /**
  * Hook tải vị trí bài học dang dở gần nhất để Tiếp tục học
  */
-export function useContinueLearning(userId?: string) {
-  const url = userId ? `/api/user/continue?userId=${userId}` : null;
+export function useContinueLearning() {
+  const url = '/api/user/continue';
   const { data, error, isLoading, mutate: refreshContinue } = useSWR<{
     continueData: {
       bookId: number;
@@ -79,7 +79,7 @@ export function useContinueLearning(userId?: string) {
     } | null;
   }>(url, fetcher, {
     revalidateOnFocus: true,
-    dedupingInterval: 15000,
+    dedupingInterval: 5000,
   });
 
   return {
@@ -93,8 +93,8 @@ export function useContinueLearning(userId?: string) {
 /**
  * Hook tải thống kê tiếng Trung HSK
  */
-export function useChineseStats(userId?: string) {
-  const url = userId ? `/api/chinese/stats?userId=${userId}` : null;
+export function useChineseStats() {
+  const url = '/api/chinese/stats';
   const { data, error, isLoading, mutate: refreshChineseStats } = useSWR<{
     stats: ChineseDashboardStats;
   }>(url, fetcher, {
@@ -113,7 +113,6 @@ export function useChineseStats(userId?: string) {
 /**
  * Làm mới toàn bộ cache học tập sau khi hoàn thành bài học
  */
-export function invalidateLearningData(userId?: string) {
-  if (!userId) return;
-  mutate((key) => typeof key === 'string' && key.includes(userId));
+export function invalidateLearningData() {
+  mutate((key) => typeof key === 'string' && (key.startsWith('/api/user') || key.startsWith('/api/books') || key.startsWith('/api/review')));
 }

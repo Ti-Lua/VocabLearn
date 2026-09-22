@@ -17,6 +17,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { Topic, Book, Vocabulary, WordStatus } from '@/types';
+import { saveLocalWordProgress } from '@/lib/progressStorage';
 
 export default function TopicDetailPage() {
   const params = useParams();
@@ -30,44 +31,53 @@ export default function TopicDetailPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchTopicData = useCallback(() => {
-    if (!topicId || !user) return;
-    fetch(`/api/topics/${topicId}?userId=${user.id}`)
+    if (!topicId) return;
+    fetch(`/api/topics/${topicId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.topic) setTopic(data.topic);
         if (data.book) setBook(data.book);
-        if (data.vocabulary) setVocabulary(data.vocabulary);
+        if (data.vocabulary) {
+          setVocabulary(data.vocabulary);
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [topicId, user]);
+  }, [topicId]);
 
   useEffect(() => {
     fetchTopicData();
   }, [fetchTopicData]);
 
   const handleProgressUpdate = async (vocabId: number, status: WordStatus) => {
-    if (!user) return;
-
-    // Optimistic UI update
+    // 1. Optimistic UI update on vocabulary state (0ms)
     setVocabulary((prev) =>
       prev.map((v) => (v.id === vocabId ? { ...v, status } : v))
     );
 
+    // 2. Persist to localStorage immediately
+    saveLocalWordProgress('personal', vocabId, status);
+
+    // 3. Persist to server API in background (Supabase Cloud)
     try {
       await fetch('/api/vocabulary/progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
           vocabularyId: vocabId,
           status,
         }),
       });
-      // Refresh topic stats
-      fetchTopicData();
+
+      // 4. Update topic metadata (is_completed, etc.) without wiping out client vocabulary state
+      fetch(`/api/topics/${topicId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.topic) setTopic(data.topic);
+        })
+        .catch(() => {});
     } catch (err) {
-      console.error('Error updating progress:', err);
+      console.error('Error updating progress on server:', err);
     }
   };
 
@@ -82,12 +92,12 @@ export default function TopicDetailPage() {
     );
   }
 
-  if (!topic || !book || !user) {
+  if (!topic || !book) {
     return (
       <div className="min-h-screen bg-[#080808] flex flex-col">
         <AppHeader />
         <div className="flex-1 flex items-center justify-center text-neutral-400">
-          {!user ? 'Vui lòng đăng nhập để tiếp tục.' : 'Không tìm thấy Topic.'}
+          Không tìm thấy Topic.
         </div>
       </div>
     );

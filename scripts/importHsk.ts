@@ -25,7 +25,11 @@ interface ImportRow {
 }
 
 export function importHskVocabulary(excelPath?: string) {
-  const filePath = excelPath || path.join(process.cwd(), 'HSK1-HSK6_CLEAN_WEB_READY.xlsx');
+  let defaultPath = path.join(process.cwd(), 'data', 'sources', 'HSK1-HSK6_CLEAN_WEB_READY.xlsx');
+  if (!fs.existsSync(defaultPath)) {
+    defaultPath = path.join(process.cwd(), 'HSK1-HSK6_CLEAN_WEB_READY.xlsx');
+  }
+  const filePath = excelPath || defaultPath;
 
   console.log('====================================================');
   console.log('🇨🇳 BẮT ĐẦU IMPORT TỪ VỰNG TIẾNG TRUNG HSK 1 - 6');

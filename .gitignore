@@ -42,3 +42,11 @@ next-env.d.ts
 
 # scratch
 scratch/
+
+# sqlite temporary files
+*.db-shm
+*.db-wal
+*.db-journal
+
+# local accounts cache
+data/registered_accounts.json

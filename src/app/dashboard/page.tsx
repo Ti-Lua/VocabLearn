@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { AppHeader } from '@/components/AppHeader';
@@ -27,31 +26,22 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const { isChinese } = useLanguage();
 
-  // SWR Caching Hooks - Tải tức thì 0ms từ bộ nhớ đệm
-  const { books, isLoading: booksLoading } = useBooks(user?.id);
-  const { stats: userStats } = useUserStats(user?.id);
-  const { continueData } = useContinueLearning(user?.id);
-  const { chineseStats, isLoading: zhLoading } = useChineseStats(user?.id);
+  // SWR Caching Hooks - Tải trực tiếp từ Supabase qua Server API
+  const { books, isLoading: booksLoading } = useBooks();
+  const { stats: userStats } = useUserStats();
+  const { continueData } = useContinueLearning();
+  const { chineseStats, isLoading: zhLoading } = useChineseStats();
 
   const [reviewCount, setReviewCount] = useState<number>(0);
 
-  // Auth Guard
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace('/auth/login?redirect=/dashboard');
-    }
-  }, [user, authLoading, router]);
-
   // Fetch review words count in background
   useEffect(() => {
-    if (!user) return;
     const reviewUrl = isChinese
-      ? `/api/chinese/review?userId=${user.id}`
-      : `/api/review?userId=${user.id}`;
+      ? '/api/chinese/review'
+      : '/api/review?status=review';
 
     fetch(reviewUrl)
       .then((r) => r.json())
@@ -59,9 +49,9 @@ export default function DashboardPage() {
         if (res.words) setReviewCount(res.words.length);
       })
       .catch(() => {});
-  }, [user, isChinese]);
+  }, [isChinese]);
 
-  const loading = authLoading || (isChinese ? zhLoading && !chineseStats : booksLoading && books.length === 0);
+  const loading = isChinese ? zhLoading && !chineseStats : booksLoading && books.length === 0;
 
   return (
     <div className="min-h-screen bg-[#080808] flex flex-col">

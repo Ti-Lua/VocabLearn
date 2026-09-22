@@ -1,19 +1,26 @@
 import { NextResponse } from 'next/server';
-import { getTopicById, getVocabularyForTopic, getBookById } from '@/lib/services';
+import {
+  getPersonalTopicById,
+  getPersonalBookById,
+  getTopicVocabularyWithProgress,
+} from '@/lib/personalLearningService';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const topicId = parseInt(resolvedParams.id, 10);
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get('userId') || undefined;
+  try {
+    const resolvedParams = await params;
+    const topicId = parseInt(resolvedParams.id, 10);
 
-  const topic = getTopicById(topicId, userId);
-  if (!topic) {
-    return NextResponse.json({ error: 'Không tìm thấy topic' }, { status: 404 });
+    const topic = await getPersonalTopicById(topicId);
+    if (!topic) {
+      return NextResponse.json({ error: 'Không tìm thấy topic' }, { status: 404 });
+    }
+
+    const book = await getPersonalBookById(topic.book_id);
+    const vocabulary = await getTopicVocabularyWithProgress(topicId);
+
+    return NextResponse.json({ topic, book, vocabulary });
+  } catch (error: any) {
+    console.error('Fetch topic error:', error);
+    return NextResponse.json({ error: error?.message || 'Lỗi tải topic' }, { status: 500 });
   }
-
-  const book = getBookById(topic.book_id, userId);
-  const vocabulary = getVocabularyForTopic(topicId, userId);
-
-  return NextResponse.json({ topic, book, vocabulary });
 }

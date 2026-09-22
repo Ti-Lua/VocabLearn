@@ -159,7 +159,10 @@ export function importAllFiles(resetFirst = true): ImportReport[] {
   ];
 
   for (const target of targets) {
-    const filePath = path.join(baseDir, target.fileName);
+    let filePath = path.join(baseDir, 'data', 'sources', target.fileName);
+    if (!fs.existsSync(filePath)) {
+      filePath = path.join(baseDir, target.fileName);
+    }
     if (!fs.existsSync(filePath)) {
       console.warn(`[WARN] File not found: ${target.fileName}`);
       continue;

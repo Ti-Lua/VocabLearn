@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getChineseDashboardStats } from '@/lib/chineseService';
+import { PERSONAL_PROFILE_ID } from '@/config/personal';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'demo-user-id';
+    const userId = searchParams.get('userId') || PERSONAL_PROFILE_ID;
 
     const stats = getChineseDashboardStats(userId);
     return NextResponse.json({ success: true, stats });

@@ -1,18 +1,25 @@
 import { NextResponse } from 'next/server';
-import { updateWordProgress } from '@/lib/services';
+import { updatePersonalWordProgress } from '@/lib/personalLearningService';
 import { WordStatus } from '@/types';
 
 export async function POST(req: Request) {
   try {
-    const { userId, vocabularyId, status, isCorrect } = await req.json();
-    if (!userId || !vocabularyId || !status) {
-      return NextResponse.json({ error: 'Thiếu thông tin' }, { status: 400 });
+    const body = await req.json();
+    const { vocabularyId, status, isCorrect } = body;
+
+    if (!vocabularyId || !status) {
+      return NextResponse.json({ error: 'Thiếu vocabularyId hoặc status' }, { status: 400 });
     }
 
-    const result = updateWordProgress(userId, vocabularyId, status as WordStatus, isCorrect);
+    const result = await updatePersonalWordProgress(
+      Number(vocabularyId),
+      status as WordStatus,
+      isCorrect
+    );
+
     return NextResponse.json({ success: true, result });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update progress error:', error);
-    return NextResponse.json({ error: 'Lỗi cập nhật trạng thái' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Lỗi cập nhật trạng thái' }, { status: 500 });
   }
 }

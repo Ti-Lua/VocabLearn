@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Vocabulary, WordStatus } from '@/types';
 import { AudioButton } from '@/components/AudioButton';
 import { AudioSpeedControl } from '@/components/AudioSpeedControl';
@@ -45,16 +45,57 @@ export function LearnTab({
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const sortAsc = true;
 
-  // Sync items when vocabulary prop changes
-  useEffect(() => {
-    setItems(vocabulary);
+  const hasAutoResumedRef = useRef(false);
+  const currentTopicIdRef = useRef<number | null>(null);
 
-    // Auto resume at first unmastered or review word
-    const resumeIndex = vocabulary.findIndex(
-      (v) => v.status === 'learning' || v.status === 'review' || v.status === 'new'
-    );
-    if (resumeIndex !== -1) {
-      setCurrentIndex(resumeIndex);
+  // Sync items when vocabulary prop changes, without forcibly resetting currentIndex
+  useEffect(() => {
+    setItems((prev) => {
+      if (prev.length === vocabulary.length && prev.length > 0) {
+        return prev.map((item) => {
+          const updated = vocabulary.find((v) => v.id === item.id);
+          return updated ? { ...item, status: updated.status } : item;
+        });
+      }
+      return vocabulary;
+    });
+
+    // Detect if topic changed
+    const topicId = vocabulary[0]?.topic_id;
+    if (topicId !== undefined && topicId !== currentTopicIdRef.current) {
+      currentTopicIdRef.current = topicId;
+      hasAutoResumedRef.current = false;
+    }
+
+    // Auto resume at last studied word or first unmastered word ONLY ONCE on topic load
+    if (!hasAutoResumedRef.current && vocabulary.length > 0) {
+      hasAutoResumedRef.current = true;
+      let targetIndex = -1;
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const startWordId = urlParams.get('startWordId');
+        if (startWordId) {
+          targetIndex = vocabulary.findIndex((v) => v.id === Number(startWordId));
+        }
+        if (targetIndex === -1 && topicId) {
+          const saved = localStorage.getItem(`learnvocab_topic_${topicId}_index`);
+          if (saved) {
+            const idx = parseInt(saved, 10);
+            if (idx >= 0 && idx < vocabulary.length) targetIndex = idx;
+          }
+        }
+      }
+
+      if (targetIndex !== -1) {
+        setCurrentIndex(targetIndex);
+      } else {
+        const resumeIndex = vocabulary.findIndex(
+          (v) => v.status === 'learning' || v.status === 'review' || v.status === 'new'
+        );
+        if (resumeIndex !== -1) {
+          setCurrentIndex(resumeIndex);
+        }
+      }
     }
   }, [vocabulary]);
 
@@ -74,29 +115,75 @@ export function LearnTab({
 
   const currentWord = items[currentIndex];
 
-  const handleNext = useCallback(() => {
-    if (currentIndex < items.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
+
+
+  // Auto save current position
+  useEffect(() => {
+    const topicId = items[0]?.topic_id;
+    if (topicId && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`learnvocab_topic_${topicId}_index`, String(currentIndex));
+      } catch {}
     }
-  }, [currentIndex, items.length]);
+  }, [currentIndex, items]);
+
+  const isSavingRef = useRef(false);
+
+  const handleNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev < items.length - 1 ? prev + 1 : prev));
+  }, [items.length]);
 
   const handlePrev = useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-    }
-  }, [currentIndex]);
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : 0));
+  }, []);
 
   const handleMarkMastered = useCallback(() => {
-    if (!currentWord) return;
-    onProgressUpdate(currentWord.id, 'mastered');
-    handleNext();
-  }, [currentWord, onProgressUpdate, handleNext]);
+    if (!currentWord || isSavingRef.current) return;
+    isSavingRef.current = true;
+    setTimeout(() => { isSavingRef.current = false; }, 300);
+
+    const targetId = currentWord.id;
+
+    // 1. Notify parent to persist progress to Supabase Cloud immediately
+    onProgressUpdate(targetId, 'mastered');
+
+    // 2. Update local items state so badge and status update in 0ms
+    setItems((prev) =>
+      prev.map((item) => (item.id === targetId ? { ...item, status: 'mastered' } : item))
+    );
+
+    // 3. Advance to the next word immediately
+    if (currentIndex < items.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+    } else {
+      setToastMessage('🎉 Bạn đã hoàn thành học tất cả các từ trong Topic này!');
+      setTimeout(() => setToastMessage(null), 3500);
+    }
+  }, [currentWord, currentIndex, items.length, onProgressUpdate]);
 
   const handleMarkReview = useCallback(() => {
-    if (!currentWord) return;
-    onProgressUpdate(currentWord.id, 'review');
-    handleNext();
-  }, [currentWord, onProgressUpdate, handleNext]);
+    if (!currentWord || isSavingRef.current) return;
+    isSavingRef.current = true;
+    setTimeout(() => { isSavingRef.current = false; }, 300);
+
+    const targetId = currentWord.id;
+
+    // 1. Notify parent to persist progress to Supabase Cloud immediately
+    onProgressUpdate(targetId, 'review');
+
+    // 2. Update local items state
+    setItems((prev) =>
+      prev.map((item) => (item.id === targetId ? { ...item, status: 'review' } : item))
+    );
+
+    // 3. Advance to the next word immediately
+    if (currentIndex < items.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+    } else {
+      setToastMessage('Đã đến từ cuối cùng trong chủ đề này.');
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  }, [currentWord, currentIndex, items.length, onProgressUpdate]);
 
   // AI Visual Concept Pipeline State
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -204,12 +291,18 @@ export function LearnTab({
         if (currentWord) {
           playPronunciation(currentWord.word, currentWord.audio_url);
         }
+      } else if (e.key === '1') {
+        e.preventDefault();
+        handleMarkReview();
+      } else if (e.key === '2' || e.key === '3' || e.key === 'Enter') {
+        e.preventDefault();
+        handleMarkMastered();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, handleNext, handlePrev, currentWord]);
+  }, [mode, handleNext, handlePrev, handleMarkMastered, handleMarkReview, currentWord]);
 
   // List mode filtered items
   const filteredList = items
@@ -472,10 +565,12 @@ export function LearnTab({
           </div>
 
           {/* Keyboard hints */}
-          <div className="flex items-center justify-center gap-6 text-[11px] text-neutral-400 pt-1">
-            <span>Phím <kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">←</kbd> Từ trước</span>
-            <span>Phím <kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">→</kbd> Từ sau</span>
-            <span>Phím <kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">Space</kbd> Phát âm</span>
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-[11px] text-neutral-400 pt-1">
+            <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">←</kbd> Từ trước</span>
+            <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-amber-400 font-mono font-bold">1</kbd> Ôn lại</span>
+            <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-emerald-400 font-mono font-bold">2</kbd> hoặc <kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-emerald-400 font-mono font-bold">Enter</kbd> Đã thuộc</span>
+            <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">→</kbd> Tiếp theo</span>
+            <span><kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono">Space</kbd> Phát âm</span>
           </div>
         </div>
       )}

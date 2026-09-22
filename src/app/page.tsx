@@ -2,14 +2,12 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
 
 export default function Home() {
-  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/languages');
+    router.replace('/dashboard');
   }, [router]);
 
   return (
@@ -19,7 +17,7 @@ export default function Home() {
           <span className="text-white font-black text-xl">L</span>
         </div>
         <p className="text-neutral-400 text-sm font-medium tracking-wide">
-          Đang khởi động LearnVocab by Tí Lửa...
+          Đang mở LearnVocab...
         </p>
       </div>
     </div>

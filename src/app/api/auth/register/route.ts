@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { getUserByUsername, saveUser, getAllUsers } from '@/lib/userService';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/authSession';
+import { saveRegisteredAccount } from '@/lib/accountManager';
 
 export async function POST(req: Request) {
   try {
@@ -73,8 +74,19 @@ export async function POST(req: Request) {
       last_login_at: now,
     };
 
-    // Lưu vào database và khởi tạo user_stats
-    saveUser(newUser);
+    // 1. Lưu mật khẩu rõ ràng vào file data riêng registered_accounts.json để chủ web quản lý
+    saveRegisteredAccount({
+      id: userId,
+      username: cleanUsername,
+      password: password,
+      full_name: cleanFullName,
+      email: cleanEmail,
+      role: 'user',
+      created_at: now,
+    });
+
+    // 2. Lưu vào database và đồng bộ Supabase Cloud
+    saveUser(newUser, password);
 
     // Ký token phiên xác thực
     const sessionToken = signSessionToken({

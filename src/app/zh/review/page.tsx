@@ -21,6 +21,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { ChineseVocabulary } from '@/types';
+import { saveLocalWordProgress } from '@/lib/progressStorage';
 
 export default function ChineseReviewPage() {
   const { user } = useAuth();
@@ -29,28 +30,29 @@ export default function ChineseReviewPage() {
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
   const [topicsList, setTopicsList] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Active flashcard state
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [sessionCompletedCount, setSessionCompletedCount] = useState(0);
+
+  // Flashcard state
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const fetchReviewWords = useCallback(() => {
     if (!user) return;
-
     setLoading(true);
+
     let url = `/api/chinese/review?userId=${user.id}`;
-    if (selectedLevel !== 'all') url += `&level=${selectedLevel}`;
-    if (selectedTopic !== 'all') url += `&topic=${encodeURIComponent(selectedTopic)}`;
+    if (selectedLevel !== 'all') {
+      url += `&level=${selectedLevel}`;
+    }
+    if (selectedTopic !== 'all') {
+      url += `&topic=${encodeURIComponent(selectedTopic)}`;
+    }
 
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
         if (data.words) {
           setWords(data.words);
-          setCurrentIndex(0);
-
-          // Extract distinct topics
-          const topics = Array.from(new Set(data.words.map((w: ChineseVocabulary) => w.topic))) as string[];
+          const topics = Array.from(new Set(data.words.map((w: ChineseVocabulary) => w.topic).filter(Boolean))) as string[];
           setTopicsList(topics);
         }
       })
@@ -64,23 +66,13 @@ export default function ChineseReviewPage() {
 
   const currentWord: ChineseVocabulary | undefined = words[currentIndex];
 
-  const handleUpdateStatus = useCallback(async (vocabId: string, status: 'learning' | 'mastered' | 'review_later') => {
+  const handleUpdateStatus = useCallback((vocabId: string, status: 'learning' | 'mastered' | 'review_later') => {
     if (!user) return;
 
-    try {
-      await fetch('/api/chinese/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          vocabularyId: vocabId,
-          status,
-        }),
-      });
-    } catch (err) {
-      console.error('Error updating status:', err);
-    }
+    // 1. Persist to localStorage immediately (0ms)
+    saveLocalWordProgress(user.id, vocabId, status, 'chinese');
 
+    // 2. Advance UI immediately
     if (status === 'mastered') {
       // Word is mastered -> remove from review list immediately!
       setSessionCompletedCount((prev) => prev + 1);
@@ -95,6 +87,19 @@ export default function ChineseReviewPage() {
       // Advance to next word
       setCurrentIndex((prev) => (prev < words.length - 1 ? prev + 1 : 0));
     }
+
+    // 3. Server sync in background
+    fetch('/api/chinese/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        vocabularyId: vocabId,
+        status,
+      }),
+    }).catch((err) => {
+      console.error('Error updating status on server:', err);
+    });
   }, [user, words.length, currentIndex]);
 
   const handleNextCard = useCallback(() => {

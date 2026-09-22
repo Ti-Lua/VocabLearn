@@ -301,7 +301,7 @@ export function updateChineseWordProgress(
         status,
         mastery_level: status === 'mastered' ? 5 : status === 'learning' ? 2 : 1,
         updated_at: nowIso,
-      }).then(({ error }) => {
+      }, { onConflict: 'user_id,vocabulary_id' }).then(({ error }) => {
         if (error) console.warn('Supabase sync Chinese progress error:', error.message);
       });
     }

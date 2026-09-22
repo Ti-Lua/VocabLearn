@@ -22,6 +22,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { ChineseVocabulary } from '@/types';
+import { saveLocalWordProgress, mergeWithLocalProgress } from '@/lib/progressStorage';
 
 export default function ChineseTopicDetailPage({
   params,
@@ -52,7 +53,8 @@ export default function ChineseTopicDetailPage({
       .then((r) => r.json())
       .then((data) => {
         if (data.words) {
-          setWords(data.words);
+          const merged = mergeWithLocalProgress<ChineseVocabulary>(user.id, data.words, 'chinese');
+          setWords(merged);
         }
       })
       .catch(console.error)
@@ -66,45 +68,43 @@ export default function ChineseTopicDetailPage({
   const currentWord: ChineseVocabulary | undefined = words[currentIndex];
 
   const handleNextCard = useCallback(() => {
-    if (currentIndex < words.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-    }
-  }, [currentIndex, words.length]);
+    setCurrentIndex((prev) => (prev < words.length - 1 ? prev + 1 : prev));
+  }, [words.length]);
 
   const handlePrevCard = useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-    }
-  }, [currentIndex]);
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : 0));
+  }, []);
 
-  // Update progress handler
-  const handleUpdateStatus = useCallback(async (vocabId: string, status: 'learning' | 'mastered' | 'review_later') => {
+  // Update progress handler - immediate 0ms card advance and persistence
+  const handleUpdateStatus = useCallback((vocabId: string, status: 'learning' | 'mastered' | 'review_later') => {
     if (!user) return;
 
-    // Optimistic UI update
+    // 1. Optimistic UI update in 0ms
     setWords((prev) =>
       prev.map((w) => (w.id === vocabId ? { ...w, status } : w))
     );
 
-    try {
-      await fetch('/api/chinese/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          vocabularyId: vocabId,
-          status,
-        }),
-      });
-    } catch (err) {
-      console.error('Error updating status:', err);
+    // 2. Persist to localStorage immediately
+    saveLocalWordProgress(user.id, vocabId, status, 'chinese');
+
+    // 3. Auto next card immediately in flashcard mode
+    if (activeTab === 'flashcard') {
+      setCurrentIndex((prev) => (prev < words.length - 1 ? prev + 1 : prev));
     }
 
-    // Auto next card in flashcard mode
-    if (activeTab === 'flashcard' && currentIndex < words.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-    }
-  }, [user, activeTab, currentIndex, words.length]);
+    // 4. Send background server sync
+    fetch('/api/chinese/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        vocabularyId: vocabId,
+        status,
+      }),
+    }).catch((err) => {
+      console.error('Error updating status:', err);
+    });
+  }, [user, activeTab, words.length]);
 
   // Keyboard shortcut listener
   useEffect(() => {

@@ -2,16 +2,13 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { AppHeader } from '@/components/AppHeader';
-import { ArrowRight, Sparkles, CheckCircle2, Clock, Info, X, BookOpen, Flame, UserCheck } from 'lucide-react';
+import { ArrowRight, Sparkles, CheckCircle2, Clock, Info, X } from 'lucide-react';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '@/config/languages';
 import { useLanguage } from '@/context/LanguageContext';
-import { useAuth } from '@/context/AuthContext';
 
 export default function LanguageSelectionPage() {
   const router = useRouter();
-  const { user } = useAuth();
   const { setLanguage } = useLanguage();
   const languages = SUPPORTED_LANGUAGES;
   const [showJapaneseModal, setShowJapaneseModal] = useState(false);
@@ -23,11 +20,7 @@ export default function LanguageSelectionPage() {
     }
 
     setLanguage(code);
-    if (!user) {
-      router.push('/auth/login?redirect=/dashboard');
-    } else {
-      router.push('/dashboard');
-    }
+    router.push('/dashboard');
   };
 
   return (
@@ -53,7 +46,6 @@ export default function LanguageSelectionPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
           {languages.map((lang) => {
             const isActive = lang.status === 'active';
-            const isJapanese = lang.code === 'ja';
 
             return (
               <div
@@ -134,35 +126,6 @@ export default function LanguageSelectionPage() {
             );
           })}
         </div>
-
-        {/* Guest Banner if not logged in */}
-        {!user && (
-          <div className="mt-12 w-full max-w-2xl p-5 rounded-2xl bg-gradient-to-r from-[#171213] to-[#121212] border border-[#FF202F]/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3 text-left">
-              <div className="w-10 h-10 rounded-xl bg-[#FF202F]/15 text-[#FF202F] flex items-center justify-center flex-shrink-0">
-                <Flame size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-white">Bạn chưa đăng nhập?</p>
-                <p className="text-xs text-neutral-400">Tạo tài khoản miễn phí để lưu tiến độ và lịch sử làm bài</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link
-                href="/auth/login"
-                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-neutral-300 hover:text-white bg-neutral-800 hover:bg-neutral-750 transition-all"
-              >
-                Đăng nhập
-              </Link>
-              <Link
-                href="/auth/register"
-                className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-[#FF202F] hover:bg-[#D91827] shadow-md shadow-[#FF202F]/25 transition-all"
-              >
-                Đăng ký ngay
-              </Link>
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Japanese Coming Soon Modal */}

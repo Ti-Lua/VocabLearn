@@ -34,7 +34,7 @@ const AVATAR_PRESETS = [
 export default function ProfilePage() {
   const router = useRouter();
   const { user, updateUser, loading: authLoading } = useAuth();
-  const { stats } = useUserStats(user?.id);
+  const { stats } = useUserStats();
 
   // Form states
   const [fullName, setFullName] = useState(user?.full_name || '');
@@ -71,10 +71,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) {
-    router.replace('/auth/login?redirect=/profile');
-    return null;
-  }
+
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
