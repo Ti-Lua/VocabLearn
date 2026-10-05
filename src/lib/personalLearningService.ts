@@ -195,16 +195,27 @@ export async function getPersonalUserStats(targetUserId?: string): Promise<UserS
   }
 
   try {
-    // 1. Lấy danh sách tiến độ từ vựng của profile
+    // 1. Lấy danh sách tiến độ từ vựng của profile (cả Tiếng Anh và Tiếng Trung HSK)
     const { data: progressList } = await supabase
       .from('user_vocabulary_progress')
       .select('status')
       .eq('user_id', uid);
 
-    const mastered = progressList?.filter((p) => p.status === 'mastered').length || 0;
-    const review = progressList?.filter((p) => p.status === 'review').length || 0;
-    const learning = progressList?.filter((p) => p.status === 'learning').length || 0;
-    const totalLearned = mastered + review + learning;
+    const { data: zhProgressList } = await supabase
+      .from('user_chinese_progress')
+      .select('status')
+      .eq('user_id', uid);
+
+    const enMastered = progressList?.filter((p) => p.status === 'mastered').length || 0;
+    const enReview = progressList?.filter((p) => p.status === 'review').length || 0;
+    const enLearning = progressList?.filter((p) => p.status === 'learning').length || 0;
+
+    const zhMastered = zhProgressList?.filter((p) => p.status === 'mastered').length || 0;
+    const zhReview = zhProgressList?.filter((p) => p.status === 'review_later').length || 0;
+    const zhLearning = zhProgressList?.filter((p) => p.status === 'learning').length || 0;
+
+    const mastered = enMastered + zhMastered;
+    const totalLearned = enMastered + enReview + enLearning + zhMastered + zhReview + zhLearning;
 
     // 2. Lấy số topic đã hoàn thành
     const { count: completedTopics } = await supabase

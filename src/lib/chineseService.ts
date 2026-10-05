@@ -226,13 +226,63 @@ export function getTopicWords(level: number, topic: string, userId: string): Chi
 }
 
 /**
+ * Đồng bộ toàn bộ tiến độ tiếng Trung từ Supabase về SQLite local
+ */
+export async function syncChineseProgressFromSupabase(userId: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase || !userId) return;
+  try {
+    const { data, error } = await supabase
+      .from('user_chinese_progress')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error || !data || data.length === 0) return;
+
+    const db = getDb();
+    const insertStmt = db.prepare(`
+      INSERT INTO user_chinese_progress (
+        user_id, vocabulary_id, status, mastery_level, review_count, correct_count, incorrect_count, last_reviewed_at, next_review_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id, vocabulary_id) DO UPDATE SET
+        status = excluded.status,
+        mastery_level = excluded.mastery_level,
+        review_count = excluded.review_count,
+        correct_count = excluded.correct_count,
+        incorrect_count = excluded.incorrect_count,
+        last_reviewed_at = excluded.last_reviewed_at,
+        next_review_at = excluded.next_review_at,
+        updated_at = excluded.updated_at
+    `);
+
+    for (const row of data) {
+      insertStmt.run(
+        row.user_id,
+        row.vocabulary_id,
+        row.status,
+        row.mastery_level || 0,
+        row.review_count || 0,
+        row.correct_count || 0,
+        row.incorrect_count || 0,
+        row.last_reviewed_at || null,
+        row.next_review_at || null,
+        row.created_at || new Date().toISOString(),
+        row.updated_at || new Date().toISOString()
+      );
+    }
+  } catch (e) {
+    console.warn('Lỗi đồng bộ từ Supabase vào SQLite tiếng Trung:', e);
+  }
+}
+
+/**
  * Update user learning progress for a specific Chinese vocabulary item
  */
-export function updateChineseWordProgress(
+export async function updateChineseWordProgress(
   userId: string,
   vocabularyId: string,
   status: 'learning' | 'mastered' | 'review_later'
-): { success: boolean; status: ChineseWordStatus } {
+): Promise<{ success: boolean; status: ChineseWordStatus }> {
   const db = getDb();
 
   // Validate vocabulary exists
@@ -290,20 +340,53 @@ export function updateChineseWordProgress(
     status
   );
 
-  // Đồng bộ lên Supabase Cloud (đảm bảo dữ liệu bền vững khi deploy Vercel)
+  // Đồng bộ tức thì lên Supabase Cloud (Await để đảm bảo serverless không terminate sớm)
   try {
     const supabase = getSupabaseAdmin();
     if (supabase) {
       const nowIso = new Date().toISOString();
-      supabase.from('user_chinese_progress').upsert({
+      const nextReviewDate = new Date();
+      if (status === 'mastered') nextReviewDate.setDate(nextReviewDate.getDate() + 7);
+      else if (status === 'review_later') nextReviewDate.setDate(nextReviewDate.getDate() + 1);
+      else nextReviewDate.setDate(nextReviewDate.getDate() + 2);
+
+      const { error: upsertErr } = await supabase.from('user_chinese_progress').upsert({
         user_id: userId,
         vocabulary_id: vocabularyId,
         status,
         mastery_level: status === 'mastered' ? 5 : status === 'learning' ? 2 : 1,
+        review_count: 1,
+        correct_count: status === 'mastered' ? 1 : 0,
+        incorrect_count: status === 'learning' ? 1 : 0,
+        last_reviewed_at: nowIso,
+        next_review_at: nextReviewDate.toISOString(),
         updated_at: nowIso,
-      }, { onConflict: 'user_id,vocabulary_id' }).then(({ error }) => {
-        if (error) console.warn('Supabase sync Chinese progress error:', error.message);
-      });
+      }, { onConflict: 'user_id,vocabulary_id' });
+
+      if (upsertErr) {
+        console.warn('Supabase sync Chinese progress error:', upsertErr.message);
+      } else {
+        // Cập nhật thống kê user_stats trên Supabase
+        const { count: enMastered } = await supabase
+          .from('user_vocabulary_progress')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('status', 'mastered');
+
+        const { count: zhMastered } = await supabase
+          .from('user_chinese_progress')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('status', 'mastered');
+
+        const totalMastered = (enMastered || 0) + (zhMastered || 0);
+
+        await supabase.from('user_stats').upsert({
+          user_id: userId,
+          total_words_mastered: totalMastered,
+          updated_at: nowIso,
+        }, { onConflict: 'user_id' });
+      }
     }
   } catch (e) {
     console.warn('Lỗi gọi Supabase từ updateChineseWordProgress:', e);

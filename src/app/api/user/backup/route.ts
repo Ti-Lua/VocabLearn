@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSessionFromCookies } from '@/lib/authSession';
 import { getUserById } from '@/lib/userService';
+import { syncChineseProgressFromSupabase } from '@/lib/chineseService';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function GET(req: Request) {
   try {
@@ -17,6 +19,9 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Không tìm thấy người dùng' }, { status: 404 });
     }
+
+    // Đảm bảo dữ liệu tiếng Trung mới nhất từ Supabase được kéo về
+    await syncChineseProgressFromSupabase(userId);
 
     const db = getDb();
     const vocabProgress = db.prepare('SELECT * FROM user_vocabulary_progress WHERE user_id = ?').all(userId);
@@ -139,6 +144,43 @@ export async function POST(req: Request) {
           restoredChinese++;
         }
       }
+    }
+
+    // Đồng bộ lên Supabase Cloud
+    try {
+      const supabase = getSupabaseAdmin();
+      if (supabase) {
+        if (Array.isArray(backup.chineseProgress) && backup.chineseProgress.length > 0) {
+          const zhRecords = backup.chineseProgress.map((item: any) => ({
+            user_id: userId,
+            vocabulary_id: item.vocabulary_id,
+            status: item.status || 'new',
+            mastery_level: item.mastery_level || 0,
+            review_count: item.review_count || 0,
+            correct_count: item.correct_count || 0,
+            incorrect_count: item.incorrect_count || 0,
+            last_reviewed_at: item.last_reviewed_at || null,
+            next_review_at: item.next_review_at || null,
+            updated_at: item.updated_at || new Date().toISOString(),
+          }));
+          await supabase.from('user_chinese_progress').upsert(zhRecords, { onConflict: 'user_id,vocabulary_id' });
+        }
+        if (Array.isArray(backup.vocabProgress) && backup.vocabProgress.length > 0) {
+          const enRecords = backup.vocabProgress.map((item: any) => ({
+            user_id: userId,
+            vocabulary_id: item.vocabulary_id,
+            status: item.status || 'new',
+            correct_count: item.correct_count || 0,
+            wrong_count: item.wrong_count || 0,
+            last_reviewed_at: item.last_reviewed_at || null,
+            next_review_at: item.next_review_at || null,
+            updated_at: item.updated_at || new Date().toISOString(),
+          }));
+          await supabase.from('user_vocabulary_progress').upsert(enRecords, { onConflict: 'user_id,vocabulary_id' });
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase backup restore sync error:', e);
     }
 
     return NextResponse.json({

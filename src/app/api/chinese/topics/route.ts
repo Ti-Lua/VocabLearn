@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTopicWords, getTopicsByHskLevel } from '@/lib/chineseService';
+import { getTopicWords, getTopicsByHskLevel, syncChineseProgressFromSupabase } from '@/lib/chineseService';
+import { getActiveUserIdFromRequest } from '@/lib/serverUser';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const levelStr = searchParams.get('level');
     const topic = searchParams.get('topic');
-    const userId = searchParams.get('userId') || 'demo-user-id';
+    const queryUserId = searchParams.get('userId');
+    const activeUserId = await getActiveUserIdFromRequest(request);
+    const userId = queryUserId || activeUserId;
+
+    await syncChineseProgressFromSupabase(userId);
 
     if (!levelStr) {
       return NextResponse.json({ success: false, error: 'Thiếu tham số level' }, { status: 400 });

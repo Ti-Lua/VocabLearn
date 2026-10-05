@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getChineseDashboardStats } from '@/lib/chineseService';
-import { PERSONAL_PROFILE_ID } from '@/config/personal';
+import { getChineseDashboardStats, syncChineseProgressFromSupabase } from '@/lib/chineseService';
+import { getActiveUserIdFromRequest } from '@/lib/serverUser';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || PERSONAL_PROFILE_ID;
+    const queryUserId = searchParams.get('userId');
+    const activeUserId = await getActiveUserIdFromRequest(request);
+    const userId = queryUserId || activeUserId;
 
+    await syncChineseProgressFromSupabase(userId);
     const stats = getChineseDashboardStats(userId);
     return NextResponse.json({ success: true, stats });
   } catch (error) {

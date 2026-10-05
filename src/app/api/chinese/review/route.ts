@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getChineseReviewWords } from '@/lib/chineseService';
-import { PERSONAL_PROFILE_ID } from '@/config/personal';
+import { getChineseReviewWords, syncChineseProgressFromSupabase } from '@/lib/chineseService';
+import { getActiveUserIdFromRequest } from '@/lib/serverUser';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || PERSONAL_PROFILE_ID;
+    const queryUserId = searchParams.get('userId');
+    const activeUserId = await getActiveUserIdFromRequest(request);
+    const userId = queryUserId || activeUserId;
+
+    await syncChineseProgressFromSupabase(userId);
+
     const levelStr = searchParams.get('level');
     const topic = searchParams.get('topic') || 'all';
 

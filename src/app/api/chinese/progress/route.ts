@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateChineseWordProgress } from '@/lib/chineseService';
-import { PERSONAL_PROFILE_ID } from '@/config/personal';
+import { getActiveUserIdFromRequest } from '@/lib/serverUser';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const userId = body.userId || PERSONAL_PROFILE_ID;
+    const activeUserId = await getActiveUserIdFromRequest(request);
+    const userId = body.userId || activeUserId;
     const { vocabularyId, status } = body;
 
     if (!vocabularyId || !status) {
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Status không hợp lệ (learning, mastered, review_later)' }, { status: 400 });
     }
 
-    const result = updateChineseWordProgress(userId, vocabularyId, status);
+    const result = await updateChineseWordProgress(userId, vocabularyId, status);
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error updating Chinese progress:', error);

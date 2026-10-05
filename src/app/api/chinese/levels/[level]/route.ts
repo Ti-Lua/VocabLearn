@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTopicsByHskLevel, getChineseDashboardStats } from '@/lib/chineseService';
+import { getTopicsByHskLevel, getChineseDashboardStats, syncChineseProgressFromSupabase } from '@/lib/chineseService';
+import { getActiveUserIdFromRequest } from '@/lib/serverUser';
 
 export async function GET(
   request: NextRequest,
@@ -14,8 +15,11 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'demo-user-id';
+    const queryUserId = searchParams.get('userId');
+    const activeUserId = await getActiveUserIdFromRequest(request);
+    const userId = queryUserId || activeUserId;
 
+    await syncChineseProgressFromSupabase(userId);
     const topics = getTopicsByHskLevel(levelNum, userId);
     const allStats = getChineseDashboardStats(userId);
     const levelStat = allStats.levels.find((l) => l.level === levelNum);
